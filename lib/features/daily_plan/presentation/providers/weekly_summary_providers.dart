@@ -18,8 +18,8 @@ final weeklySleepSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) as
     };
   }
 
-  final avgHours = entries.fold<double>(0, (s, e) => s + e.hoursSlept) / entries.length;
-  final avgQuality = entries.fold<double>(0, (s, e) => s + e.quality) / entries.length;
+  final avgHours = entries.fold<double>(0.0, (s, e) => s + e.hoursSlept) / entries.length;
+  final avgQuality = entries.fold<double>(0.0, (s, e) => s + e.quality.toDouble()) / entries.length;
 
   // Find which days were logged
   final loggedWeekdays = entries.map((e) => e.date.weekday).toSet();
@@ -68,16 +68,16 @@ final weeklyMealSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) asy
   final dailyTotals = <String, Map<String, double>>{};
   for (final entry in thisWeek) {
     final dayKey = entry.date.toIso8601String().split('T').first;
-    dailyTotals.putIfAbsent(dayKey, () => {'calories': 0, 'protein': 0, 'calcium': 0});
-    dailyTotals[dayKey]!['calories'] = dailyTotals[dayKey]!['calories']! + entry.calories;
-    dailyTotals[dayKey]!['protein'] = dailyTotals[dayKey]!['protein']! + entry.protein;
-    dailyTotals[dayKey]!['calcium'] = dailyTotals[dayKey]!['calcium']! + entry.calcium;
+    dailyTotals.putIfAbsent(dayKey, () => {'calories': 0.0, 'protein': 0.0, 'calcium': 0.0});
+    dailyTotals[dayKey]!['calories'] = dailyTotals[dayKey]!['calories']! + entry.calories.toDouble();
+    dailyTotals[dayKey]!['protein'] = dailyTotals[dayKey]!['protein']! + entry.protein.toDouble();
+    dailyTotals[dayKey]!['calcium'] = dailyTotals[dayKey]!['calcium']! + entry.calcium.toDouble();
   }
 
   final daysLogged = dailyTotals.length;
-  final totalCal = dailyTotals.values.fold<double>(0, (s, d) => s + d['calories']!);
-  final totalProtein = dailyTotals.values.fold<double>(0, (s, d) => s + d['protein']!);
-  final totalCalcium = dailyTotals.values.fold<double>(0, (s, d) => s + d['calcium']!);
+  final totalCal = dailyTotals.values.fold<double>(0.0, (s, d) => s + d['calories']!);
+  final totalProtein = dailyTotals.values.fold<double>(0.0, (s, d) => s + d['protein']!);
+  final totalCalcium = dailyTotals.values.fold<double>(0.0, (s, d) => s + d['calcium']!);
 
   final loggedWeekdays = dailyTotals.keys.map((dk) {
     return DateTime.parse(dk).weekday;
@@ -99,24 +99,39 @@ final weeklyMealSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) asy
   };
 });
 
-/// Check if weekly recap should be shown.
-final shouldShowRecapProvider = FutureProvider<bool>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
-  final lastRecap = prefs.getString('last_recap_shown_date');
+/// Whether to show the weekly-recap badge on the dashboard.
+///
+/// The badge appears at the start of each week (Monday) and lingers all week
+/// until the user opens that week's recap — at which point it hides until the
+/// next week begins. Because weeks start on Monday, "not viewed this week" is
+/// exactly the desired behaviour; no separate weekday gate is needed.
+final weeklyRecapBadgeProvider = FutureProvider<bool>((ref) async {
   final now = DateTime.now();
 
-  // Show on Monday (start of week) or if never shown
+  final prefs = await SharedPreferences.getInstance();
+  final lastRecap = prefs.getString('last_recap_shown_date');
   if (lastRecap == null) return true;
 
   final lastDate = DateTime.tryParse(lastRecap);
   if (lastDate == null) return true;
 
-  // Show if it's a new week (Monday) and recap hasn't been shown this week
-  final lastWeekStart = lastDate.subtract(Duration(days: lastDate.weekday - 1));
-  final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-
-  return currentWeekStart.isAfter(lastWeekStart);
+  // Show only if this week's recap hasn't been viewed yet. Compare week starts
+  // normalized to date-only so a same-day time-of-day difference can't leak
+  // through and re-show the badge after it's already been opened today.
+  return _weekStart(now).isAfter(_weekStart(lastDate));
 });
+
+/// Records that this week's recap has been viewed, so the badge hides.
+Future<void> markWeeklyRecapViewed() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(
+      'last_recap_shown_date', DateTime.now().toIso8601String().split('T').first);
+}
+
+DateTime _weekStart(DateTime d) {
+  final ws = d.subtract(Duration(days: d.weekday - 1));
+  return DateTime(ws.year, ws.month, ws.day);
+}
 
 String _weekdayToName(int weekday) {
   const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

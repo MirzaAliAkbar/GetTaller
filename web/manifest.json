@@ -1,6 +1,6 @@
 {
-    "name": "gettaller_app",
-    "short_name": "gettaller_app",
+    "name": "GetTaller",
+    "short_name": "GetTaller",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

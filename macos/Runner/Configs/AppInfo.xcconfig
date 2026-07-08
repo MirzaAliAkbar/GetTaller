@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = gettaller_app
+PRODUCT_NAME = GetTaller
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.gettaller.gettallerApp
+PRODUCT_BUNDLE_IDENTIFIER = com.grayonix.GetTaller
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.gettaller. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.grayonix. All rights reserved.

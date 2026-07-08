@@ -55,8 +55,15 @@ class HeightGrowthChart extends ConsumerWidget {
       // Position by actual date relative to plan start
       for (final m in measurements) {
         final daysSinceStart = m.date.difference(planStart).inDays;
-        final week = (daysSinceStart / 7).floor().clamp(0, curve.length - 1);
-        measurementSpots.add(FlSpot(week.toDouble(), m.heightCm));
+        double xPosition;
+        if (ageYears < 21) {
+          // X is years since start
+          xPosition = daysSinceStart / 365.25;
+        } else {
+          // X is months since start
+          xPosition = daysSinceStart / 30.44;
+        }
+        measurementSpots.add(FlSpot(xPosition.clamp(0.0, (curve.length - 1).toDouble()), m.heightCm));
       }
     } else {
       // Fallback: position by index proportionally
@@ -94,14 +101,23 @@ class HeightGrowthChart extends ConsumerWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: 2,
+              interval: ageYears < 21 ? 2 : 3,
               getTitlesWidget: (value, meta) {
-                final week = value.toInt() + 1;
-                return Text(
-                  'W$week',
-                  style: GoogleFonts.inter(
-                      fontSize: 9, color: AppTheme.textTertiary),
-                );
+                final intVal = value.toInt();
+                if (ageYears < 21) {
+                  final ageLabel = ageYears + intVal;
+                  return Text(
+                    '${ageLabel}y',
+                    style: GoogleFonts.inter(
+                        fontSize: 9, color: AppTheme.textTertiary),
+                  );
+                } else {
+                  return Text(
+                    'M$intVal',
+                    style: GoogleFonts.inter(
+                        fontSize: 9, color: AppTheme.textTertiary),
+                  );
+                }
               },
             ),
           ),

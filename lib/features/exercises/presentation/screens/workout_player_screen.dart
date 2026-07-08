@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../data/exercise_database.dart';
 import '../../data/exercise_images.dart';
 
@@ -65,6 +66,7 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
     super.initState();
     _exercises = ExerciseDatabase.getByIds(widget.exerciseIds);
     if (_exercises.isNotEmpty) _remainingSeconds = _exercises.first.durationSeconds;
+    AnalyticsService().logWorkoutStarted(widget.levelNumber ?? 0);
 
     _pulseController = AnimationController(
       vsync: this,
@@ -214,6 +216,7 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
     if (level != null) {
       ref.read(userDataServiceProvider).markLevelCompleted(level);
     }
+    AnalyticsService().logWorkoutCompleted(level ?? 0);
     // Fire streak milestone if applicable
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final notif = ref.read(notificationServiceProvider);

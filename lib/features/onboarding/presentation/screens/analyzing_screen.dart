@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/ads/ad_service.dart';
 
-class AnalyzingScreen extends StatefulWidget {
+class AnalyzingScreen extends ConsumerStatefulWidget {
   const AnalyzingScreen({super.key});
 
   @override
-  State<AnalyzingScreen> createState() => _AnalyzingScreenState();
+  ConsumerState<AnalyzingScreen> createState() => _AnalyzingScreenState();
 }
 
-class _AnalyzingScreenState extends State<AnalyzingScreen>
+class _AnalyzingScreenState extends ConsumerState<AnalyzingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _pulse;
@@ -36,6 +38,12 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
     );
 
     _rotateMessages();
+    
+    // Pre-load interstitial ad for the high-value action
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adServiceProvider).loadInterstitialAd();
+    });
+
     _navigateAfter();
   }
 
@@ -49,7 +57,12 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
   }
 
   Future<void> _navigateAfter() async {
-    await Future.delayed(const Duration(seconds: 6));
+    await Future.delayed(const Duration(seconds: 8));
+    if (!mounted) return;
+    
+    // Show action-triggered interstitial before showing result
+    await ref.read(adServiceProvider).showInterstitialAd();
+
     if (!mounted) return;
     context.go('/onboarding/insight');
   }

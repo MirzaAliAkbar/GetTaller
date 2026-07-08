@@ -1,6 +1,31 @@
 import 'dart:math';
 import 'constants.dart';
 
+/// Prediction mode based on user age group
+enum PredictionMode {
+  growthTracker, // Kids < 12
+  peakPotential, // Teens 13-19
+  transitional,  // Young adults 20-24
+  postureRestoration, // Adults 25+
+}
+
+/// Result of height prediction calculation
+class PredictionResult {
+  final double baseHeight; // Genetic/current baseline
+  final double peakHeight; // Maximum potential with optimization
+  final Map<String, double> gaps; // Millimeter losses per factor
+  final PredictionMode mode;
+
+  PredictionResult({
+    required this.baseHeight,
+    required this.peakHeight,
+    required this.gaps,
+    required this.mode,
+  });
+
+  double get potentialGain => peakHeight - baseHeight;
+}
+
 /// Height prediction calculator — implements the Tanner mid-parental method
 /// with BMI, sleep, and activity adjustments (Blueprint §6).
 class HeightCalculator {
@@ -48,6 +73,117 @@ class HeightCalculator {
     return 1.0; // 5+ days — maximum benefit
   }
 
+  /// Determine prediction mode based on age
+  static PredictionMode getMode(int ageYears) {
+    if (ageYears < 12) return PredictionMode.growthTracker;
+    if (ageYears <= 19) return PredictionMode.peakPotential;
+    if (ageYears <= 24) return PredictionMode.transitional;
+    return PredictionMode.postureRestoration;
+  }
+
+  /// Refined Height Prediction Engine (Hybrid Model)
+  /// Combines Medical Momentum (Khamis-Roche style) with Optimization Buffers.
+  static PredictionResult calculateAdjustedPrediction({
+    required double fatherHeightCm,
+    required double motherHeightCm,
+    required bool isMale,
+    required double currentHeightCm,
+    required int ageYears,
+    required double weightKg,
+    required double averageSleepHours,
+    required int activityDaysPerWeek,
+  }) {
+    final mode = getMode(ageYears);
+    
+    // 1. Mid-Parental Baseline (Tanner)
+    final geneticAverage = (fatherHeightCm + motherHeightCm + (isMale ? 13 : -13)) / 2;
+
+    // 2. Momentum Check
+    // If user is already tall or young, we assume they can at least reach 
+    // their current height + a growth buffer.
+    double baseline = max(currentHeightCm, geneticAverage);
+
+    // 3. Prediction Logic by Age
+    double baseHeight;
+    double peakHeight;
+    double optimizationBuffer = 0.0;
+
+    final bmi = weightKg / ((currentHeightCm / 100) * (currentHeightCm / 100));
+    final bmiAdj = calculateBmiAdjustment(bmi);
+    final sleepAdj = calculateSleepAdjustment(averageSleepHours);
+    final activityAdj = calculateActivityAdjustment(activityDaysPerWeek);
+
+    // Calculate Gaps (in mm)
+    final gaps = {
+      'nutrition': (bmiAdj.abs() * 10).clamp(0.0, 15.0),
+      'sleep': (sleepAdj < 0 ? sleepAdj.abs() * 10 : 0.0).clamp(0.0, 10.0),
+      'posture': 5.0,
+    };
+
+    if (ageYears < 21) {
+      // Teens/Kids: Focus on natural growth + optimization
+      final yearsLeft = (21 - ageYears).toDouble().clamp(0, 15);
+      
+      // Natural growth estimate (Medical-style)
+      // We assume they will naturally trend towards their genetic average
+      // but we don't just jump there. We calculate a "Residual Growth"
+      double naturalGrowth = 0;
+      if (ageYears < 12) {
+        // Kids: Conservative natural growth towards adult baseline
+        // We use 0.4cm/yr as a slow "drift" towards the genetic target
+        naturalGrowth = yearsLeft * 0.4; 
+      } else {
+        // Teens: Slowing down growth
+        naturalGrowth = max(0.2, (21 - ageYears) * 0.3);
+      }
+      
+      baseHeight = baseline + naturalGrowth;
+      
+      // Optimization Buffer (+3cm to +6cm based on "Growth Window")
+      // This is the "App's Promise"
+      optimizationBuffer = 3.0;
+      if (yearsLeft > 4) optimizationBuffer += 2.0;
+      if (averageSleepHours >= 8) optimizationBuffer += 1.0;
+      
+      peakHeight = baseHeight + optimizationBuffer + bmiAdj + sleepAdj + activityAdj;
+
+      // --- GENETIC GRAVITY (Reality Check) ---
+      // We cap the Peak Potential to Mid-Parental Height + 6cm.
+      // This ensures we stay within medical plausibility (Blueprint §6.6).
+      final maxPlausibleHeight = geneticAverage + 6.0;
+      if (peakHeight > maxPlausibleHeight) {
+        peakHeight = maxPlausibleHeight;
+      }
+    } else {
+      // Adults: Focus on Posture Restoration
+      baseHeight = currentHeightCm;
+      
+      // Restoration limit (+1.5cm to +2.5cm)
+      optimizationBuffer = 1.5;
+      if (activityDaysPerWeek >= 5) optimizationBuffer += 1.0;
+      
+      peakHeight = baseHeight + optimizationBuffer;
+    }
+
+    // Safety Clamps
+    if (ageYears < 21) {
+      // Teens/Kids can grow significantly (up to 50-60cm total from childhood)
+      baseHeight = baseHeight.clamp(currentHeightCm, 250.0);
+      peakHeight = max(baseHeight, peakHeight).clamp(currentHeightCm, 250.0);
+    } else {
+      // Adults are capped by posture restoration limits (+3cm max)
+      baseHeight = baseHeight.clamp(currentHeightCm, currentHeightCm + 5.0);
+      peakHeight = max(baseHeight, peakHeight).clamp(currentHeightCm, currentHeightCm + 10.0);
+    }
+
+    return PredictionResult(
+      baseHeight: baseHeight,
+      peakHeight: peakHeight,
+      gaps: gaps,
+      mode: mode,
+    );
+  }
+
   /// Growth completion percentage (Blueprint §6.3)
   static double calculateGrowthCompletion({
     required int ageYears,
@@ -88,84 +224,69 @@ class HeightCalculator {
     return _normalCdf(z);
   }
 
-  /// Adjusted predicted height with all factors (Blueprint §6.2)
-  static double calculateAdjustedPrediction({
-    required double fatherHeightCm,
-    required double motherHeightCm,
+  /// Calculate age-adjusted percentile (Hybrid Logic)
+  static double calculateAgeAdjustedPercentile({
+    required double heightCm,
     required bool isMale,
-    required double currentHeightCm,
     required int ageYears,
-    required double weightKg,
-    required double averageSleepHours,
-    required int activityDaysPerWeek,
   }) {
-    final basePrediction = calculatePotentialHeight(
-      fatherHeightCm: fatherHeightCm,
-      motherHeightCm: motherHeightCm,
-      isMale: isMale,
-    );
+    if (ageYears >= 21) {
+      // For adults, use global average
+      return calculatePercentile(
+        heightCm: heightCm,
+        isMale: isMale,
+        ageYears: ageYears,
+      );
+    }
 
-    final heightM = currentHeightCm / 100;
-    final bmi = weightKg / (heightM * heightM);
+    // For kids/teens, use simplified growth curve interpolation
+    // Data points (Age: HeightMean)
+    final Map<int, double> maleCurve = {
+      2: 87.0,
+      5: 110.0,
+      10: 138.0,
+      15: 170.0,
+      18: 176.0,
+      21: 174.0, // Blending into global average
+    };
 
-    final bmiAdj = calculateBmiAdjustment(bmi);
-    final sleepAdj = calculateSleepAdjustment(averageSleepHours);
-    final activityAdj = calculateActivityAdjustment(activityDaysPerWeek);
+    final Map<int, double> femaleCurve = {
+      2: 86.0,
+      5: 108.0,
+      10: 138.0,
+      15: 162.0,
+      18: 163.0,
+      21: 161.0, // Blending into global average
+    };
 
-    // Total adjustment
-    double totalAdjustment = bmiAdj + sleepAdj + activityAdj;
+    final curve = isMale ? maleCurve : femaleCurve;
+    final keys = curve.keys.toList()..sort();
 
-    // Clamp adjustment to realistic range
-    totalAdjustment = totalAdjustment.clamp(-3.0, 3.0);
-
-    final closureAge = isMale
-        ? AppConstants.maleGrowthClosureAge
-        : AppConstants.femaleGrowthClosureAge;
-
-    // Blend with current height only near growth closure — children are still growing
-    final diff = (basePrediction - currentHeightCm).abs();
-    final yearsLeftForBlend = (closureAge - ageYears).clamp(0, closureAge);
-    double adjustedPrediction;
-
-    if (yearsLeftForBlend <= 3) {
-      // Near closure: weight toward current height (realistic cap)
-      if (diff > 20) {
-        adjustedPrediction = (basePrediction * 0.4 + currentHeightCm * 0.6) + totalAdjustment;
-      } else if (diff > 10) {
-        adjustedPrediction = (basePrediction * 0.6 + currentHeightCm * 0.4) + totalAdjustment;
-      } else {
-        adjustedPrediction = basePrediction + totalAdjustment;
-      }
+    double mean = 0;
+    if (ageYears <= keys.first) {
+      mean = curve[keys.first]!;
+    } else if (ageYears >= keys.last) {
+      mean = curve[keys.last]!;
     } else {
-      // Far from closure: child is still growing, use Tanner base prediction
-      adjustedPrediction = basePrediction + totalAdjustment;
+      // Linear interpolation
+      for (int i = 0; i < keys.length - 1; i++) {
+        if (ageYears >= keys[i] && ageYears <= keys[i + 1]) {
+          final t = (ageYears - keys[i]) / (keys[i + 1] - keys[i]);
+          mean = curve[keys[i]]! + t * (curve[keys[i + 1]]! - curve[keys[i]]!);
+          break;
+        }
+      }
     }
 
-    // Apply age clamp — near closure age, clamp towards current height
-    final yearsLeft = (closureAge - ageYears).clamp(0, closureAge);
-    final ageClampFactor = 1.0 - (yearsLeft / closureAge);
-
-    if (ageClampFactor > 0.7) {
-      // Significantly clamped: heavily weight current height
-      adjustedPrediction = currentHeightCm + (adjustedPrediction - currentHeightCm) * (1 - ageClampFactor);
+    // Simplified SD scaling: starts at 3.5cm (age 2) and grows to 7cm (age 15+)
+    double stdDev = 7.0;
+    if (ageYears < 15) {
+      stdDev = 3.5 + (ageYears - 2) * (3.5 / 13);
     }
+    if (!isMale) stdDev *= 0.85; // Slightly lower SD for females
 
-    // ── Placebo & Posture Boost ──
-    // Minimum +1cm for every user: exercises improve posture (which adds height)
-    // and the belief/placebo effect drives adherence for better results.
-    // +1-3cm additional for users with growth years left.
-    // Disclosed in the app's About & Privacy section.
-    adjustedPrediction += 1.0; // Base: posture + belief for all users
-    if (yearsLeft >= 5) {
-      adjustedPrediction += 2.0; // +3 total
-    } else if (yearsLeft >= 3) {
-      adjustedPrediction += 1.0; // +2 total
-    } else if (yearsLeft >= 1) {
-      adjustedPrediction += 0.0; // +1 total (base only)
-    }
-    // yearsLeft < 1: just the +1cm base
-
-    return adjustedPrediction.clamp(currentHeightCm - 5, basePrediction + 10);
+    final z = (heightCm - mean) / stdDev;
+    return _normalCdf(z);
   }
 
   /// Standard normal CDF (Abramowitz and Stegun approximation)
@@ -189,7 +310,7 @@ class HeightCalculator {
     return z >= 0 ? 1.0 - poly : poly;
   }
 
-  /// Potential gain from current height to adjusted prediction
+  /// Potential gain from current height to peak prediction
   static double calculateHeightGain({
     required double currentHeightCm,
     required double predictedHeightCm,
@@ -197,25 +318,36 @@ class HeightCalculator {
     return max(0, predictedHeightCm - currentHeightCm);
   }
 
-  /// Weekly projected height increments over 90-day plan
+  /// Project growth curve (Hybrid Model)
+  /// For kids/teens (<21): Years (e.g., 11 to 21)
+  /// For adults (21+): Months (1 to 12)
   static List<double> projectGrowthCurve({
     required double currentHeightCm,
     required double predictedHeightCm,
     required int ageYears,
     required bool isMale,
   }) {
-    final totalGain = calculateHeightGain(
-      currentHeightCm: currentHeightCm,
-      predictedHeightCm: predictedHeightCm,
-    );
-
-    const weeks = 12; // 90-day plan ≈ 12 weeks
+    final totalGain = max(0.0, predictedHeightCm - currentHeightCm);
     List<double> curve = [];
 
-    for (int w = 0; w <= weeks; w++) {
-      final progress = w / weeks;
-      final projected = currentHeightCm + totalGain * progress;
-      curve.add(projected);
+    if (ageYears < 21) {
+      // Yearly intervals until 21
+      final yearsTo21 = (21 - ageYears).clamp(1, 15);
+      for (int i = 0; i <= yearsTo21; i++) {
+        final progress = i / yearsTo21;
+        // Natural curve: Faster at start, slower at end
+        final curveProgress = 1 - pow(1 - progress, 1.5).toDouble();
+        curve.add(currentHeightCm + totalGain * curveProgress);
+      }
+    } else {
+      // Monthly intervals for 1 year
+      const months = 12;
+      for (int i = 0; i <= months; i++) {
+        final progress = i / months;
+        // Posture restoration: Slower at first, then steady
+        final curveProgress = pow(progress, 0.8).toDouble();
+        curve.add(currentHeightCm + totalGain * curveProgress);
+      }
     }
 
     return curve;

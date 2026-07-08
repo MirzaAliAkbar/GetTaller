@@ -7,8 +7,12 @@ import '../../../../core/utils/constants.dart';
 import '../../../../core/utils/height_calculator.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../shared/widgets/height_growth_chart.dart';
 import '../../../../shared/widgets/notification_permission_prompt.dart';
+import '../widgets/growth_window_timer.dart';
+import '../../../daily_plan/presentation/providers/weekly_summary_providers.dart';
+import 'package:in_app_review/in_app_review.dart';
 
 /// Dashboard tab — Blueprint §4.2
 /// Shows growth data, chart, streak, and quick action cards.
@@ -23,6 +27,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().logScreenView('dashboard');
     // Mark today visited for streak tracking + notification service
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final userDataService = ref.read(userDataServiceProvider);
@@ -39,6 +44,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       final milestones = [3, 7, 14, 21, 30, 60, 90];
       if (milestones.contains(streak)) {
         await notifService.fireStreakMilestone(streak);
+        
+        // Trigger In-App Review after a 7-day streak milestone
+        if (streak == 7) {
+          _requestAppReview();
+        }
       }
 
       // Streak at risk? If streak > 0 and no workout done today
@@ -64,6 +74,17 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         await showNotificationPermissionPrompt(context);
       }
     });
+  }
+
+  Future<void> _requestAppReview() async {
+    final InAppReview inAppReview = InAppReview.instance;
+    try {
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint('Error requesting review: $e');
+    }
   }
 
   @override
@@ -121,7 +142,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     AsyncValue<int> daysUntilNextAsync,
     AsyncValue<int> streakAsync,
   ) {
-    final predictedHeight = HeightCalculator.calculateAdjustedPrediction(
+    final predictionResult = HeightCalculator.calculateAdjustedPrediction(
       fatherHeightCm: userData.fatherHeightCm,
       motherHeightCm: userData.motherHeightCm,
       isMale: userData.isMale,
@@ -132,12 +153,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       activityDaysPerWeek: userData.activityDaysPerWeek,
     );
 
+    final predictedHeight = predictionResult.peakHeight;
+
     final potentialGain = HeightCalculator.calculateHeightGain(
       currentHeightCm: userData.currentHeightCm,
       predictedHeightCm: predictedHeight,
     );
 
-    final percentile = HeightCalculator.calculatePercentile(
+    final percentile = HeightCalculator.calculateAgeAdjustedPercentile(
       heightCm: userData.currentHeightCm,
       isMale: userData.isMale,
       ageYears: userData.ageYears,
@@ -147,6 +170,10 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
     final canMeasure = canMeasureAsync.asData?.value ?? false;
     final daysUntilNext = daysUntilNextAsync.asData?.value ?? 0;
+
+    // Weekly recap badge — appears at the start of each week and lingers until
+    // the user opens that week's recap (or the next week begins).
+    final showRecapBadge = ref.watch(weeklyRecapBadgeProvider).asData?.value ?? false;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppConstants.spacingLg),
@@ -167,20 +194,41 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     Text(
-                      '${userData.ageYears} yrs old • ${userData.isMale ? "Male" : "Female"}',
+                      '${userData.ageYears} yrs old • ${userData.isMale ? "Male" : "Female"} • ${predictionResult.mode.name.replaceAll(RegExp(r'(?=[A-Z])'), ' ').toUpperCase()}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
               ),
+              if (showRecapBadge) ...[
+                SizedBox(
+                  height: 36,
+                  child: IconButton(
+                    icon: const Badge(
+                      smallSize: 8,
+                      backgroundColor: AppTheme.energyOrange,
+                      child: Icon(Icons.insights_rounded, size: 22),
+                    ),
+                    tooltip: 'Weekly Recap',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    onPressed: () async {
+                      await markWeeklyRecapViewed();
+                      ref.invalidate(weeklyRecapBadgeProvider);
+                      if (context.mounted) context.push('/weekly-recap');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 2),
+              ],
               SizedBox(
                 height: 36,
                 child: IconButton(
-                  icon: const Icon(Icons.school_outlined, size: 22),
-                  tooltip: 'Education Hub',
+                  icon: const Icon(Icons.info_outline_rounded, size: 22),
+                  tooltip: 'Science Info',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  onPressed: () => context.push('/education'),
+                  onPressed: () => _showScienceInfo(context),
                 ),
               ),
               const SizedBox(width: 2),
@@ -199,11 +247,19 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
 
           const SizedBox(height: AppConstants.spacingLg),
 
-          // Daily Score Card
-          _ScoreCard(
-            score: potentialGain > 0 ? 85 : 50,
-            streak: streakAsync.asData?.value ?? 0,
-            predictedGain: potentialGain,
+          // Growth Window Timer
+          GrowthWindowTimer(
+            ageYears: userData.ageYears,
+            birthYear: userData.birthYear,
+            birthMonth: userData.birthMonth,
+          ),
+
+          const SizedBox(height: AppConstants.spacingLg),
+
+          // Dual Metric Cards
+          _DualMetricCards(
+            currentHeight: userData.currentHeightCm,
+            peakHeight: predictedHeight,
           ),
 
           const SizedBox(height: AppConstants.spacingLg),
@@ -237,6 +293,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             onMeasure: () => _addHeightMeasurement(context, userData),
             onHistory: () => _showMeasurementHistory(context, userData),
             predictedHeight: predictedHeight,
+            percentile: percentile,
+            ageYears: userData.ageYears,
           ),
 
           const SizedBox(height: AppConstants.spacingLg),
@@ -310,6 +368,53 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
           ),
 
           const SizedBox(height: AppConstants.spacingXxl),
+        ],
+      ),
+    );
+  }
+
+  void _showScienceInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Scientific Methodology'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'GetTaller uses a multi-stage calculation engine based on established growth models:',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '• Mid-Parental Height (Tanner): Predicts genetic target height using parental measurements.',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Khamis-Roche Model: Factors in current height and weight momentum for teens.',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Environmental Optimization: Models the impact of HGH release during deep sleep, nutritional availability, and spinal decompression.',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Note: All predictions include a motivational adjustment and assume strict adherence to the 90-day plan.',
+                style: TextStyle(fontSize: 12, color: AppTheme.textTertiary, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('I Understand'),
+          ),
         ],
       ),
     );
@@ -547,91 +652,138 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   }
 }
 
-class _ScoreCard extends StatelessWidget {
-  final int score;
-  final int streak;
-  final double predictedGain;
+class _DualMetricCards extends StatelessWidget {
+  final double currentHeight;
+  final double peakHeight;
 
-  const _ScoreCard({
-    required this.score,
-    required this.streak,
-    required this.predictedGain,
+  const _DualMetricCards({
+    required this.currentHeight,
+    required this.peakHeight,
   });
+
+  Future<void> _requestAppReview() async {
+    final InAppReview inAppReview = InAppReview.instance;
+    try {
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint('Error requesting review: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingXl),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.accent, AppTheme.accentDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.accent.withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Score circle
-          Container(
-            width: 80,
-            height: 80,
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(AppConstants.spacingLg),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
+              color: AppTheme.accent.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.accent.withOpacity(0.12)),
             ),
-            child: Center(
-              child: Text(
-                '$score',
-                style: GoogleFonts.inter(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppConstants.spacingLg),
-          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Daily Height Score',
-                    style: TextStyle(fontSize: 13, color: Colors.white70)),
-                const SizedBox(height: 4),
                 Text(
-                  score >= 80 ? 'On track! 🔥' : 'Keep going! 💪',
+                  'CURRENT',
                   style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: AppTheme.accent.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Icon(Icons.trending_up_rounded,
-                        color: Colors.white.withOpacity(0.8), size: 18),
-                    const SizedBox(width: 6),
                     Text(
-                      '${predictedGain.toStringAsFixed(1)} cm potential gain',
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.white.withOpacity(0.9)),
+                      currentHeight.toStringAsFixed(1),
+                      style: GoogleFonts.inter(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.accent,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'cm',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.accent.withOpacity(0.5),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(AppConstants.spacingLg),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.accent, AppTheme.accentDark],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.accent.withOpacity(0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PEAK POTENTIAL',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      peakHeight.toStringAsFixed(1),
+                      style: GoogleFonts.inter(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'cm',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -643,6 +795,8 @@ class _HeightMeasureCard extends StatelessWidget {
   final VoidCallback onMeasure;
   final VoidCallback onHistory;
   final double predictedHeight;
+  final double percentile;
+  final int ageYears;
 
   const _HeightMeasureCard({
     required this.currentHeightCm,
@@ -651,7 +805,20 @@ class _HeightMeasureCard extends StatelessWidget {
     required this.onMeasure,
     required this.onHistory,
     required this.predictedHeight,
+    required this.percentile,
+    required this.ageYears,
   });
+
+  Future<void> _requestAppReview() async {
+    final InAppReview inAppReview = InAppReview.instance;
+    try {
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint('Error requesting review: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -687,14 +854,18 @@ class _HeightMeasureCard extends StatelessWidget {
                   children: [
                     Text(
                       '${currentHeightCm.toStringAsFixed(1)} cm',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      canMeasure
-                          ? 'Ready to log your height!'
-                          : 'Next measurement in $daysUntilNext days',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      ageYears >= 21
+                          ? 'Taller than ${(percentile * 100).toStringAsFixed(0)}% of the world'
+                          : 'Taller than ${(percentile * 100).toStringAsFixed(0)}% of people your age',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.accent.withOpacity(0.8),
+                      ),
                     ),
                   ],
                 ),
@@ -719,6 +890,27 @@ class _HeightMeasureCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // Percentile Bar
+          Container(
+            height: 6,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: percentile.clamp(0.01, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.accent.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           if (!canMeasure) ...[
             const SizedBox(height: 16),
             // Circular countdown
@@ -791,6 +983,17 @@ class _SectionHeader extends StatelessWidget {
 
   const _SectionHeader({required this.title, this.action, this.onTap});
 
+  Future<void> _requestAppReview() async {
+    final InAppReview inAppReview = InAppReview.instance;
+    try {
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint('Error requesting review: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -822,6 +1025,17 @@ class _StatTile extends StatelessWidget {
     required this.icon,
     required this.color,
   });
+
+  Future<void> _requestAppReview() async {
+    final InAppReview inAppReview = InAppReview.instance;
+    try {
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint('Error requesting review: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -863,6 +1077,17 @@ class _QuickActionCard extends StatelessWidget {
     required this.color,
     required this.onTap,
   });
+
+  Future<void> _requestAppReview() async {
+    final InAppReview inAppReview = InAppReview.instance;
+    try {
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    } catch (e) {
+      debugPrint('Error requesting review: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

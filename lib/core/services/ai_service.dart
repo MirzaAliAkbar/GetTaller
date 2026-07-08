@@ -8,9 +8,9 @@ class AiService {
   factory AiService() => _instance;
   AiService._();
 
-  static const _apiKey = 'sk-R4bWJSXBtCGAYYKInPD4ue4g5Gp32UIsosIje6d2hABTLxdG0bIjBfAKBBJUgWRc';
+  static const _apiKey = String.fromEnvironment('DEEPSEEK_API_KEY');
   static const _baseUrl = 'https://opencode.ai/zen/v1/chat/completions';
-  static const _model = 'deepseek-v4-flash-free';
+  static const _model = 'deepseek-v4-flash';
 
   static const _systemPrompt = 'You are GetTaller AI Coach, an expert in height growth, '
       'nutrition, sleep optimization, exercise science, and adolescent development. '
@@ -18,6 +18,8 @@ class AiService {
       'Reference their specific meals, sleep, height history, and plan progress in your answers. '
       'Be concise but thorough. Use emojis sparingly for emphasis. '
       'Always remind users that results require consistency with their 90-day plan. '
+      'If the user is a teenager (13-19), emphasize urgency and consistency for their "Peak Potential". '
+      'If the user is an adult (25+), focus on posture restoration and spinal health. '
       'If asked about medical conditions, advise consulting a doctor.';
 
   /// Build a context string from the user's data for personalized AI responses.
@@ -58,7 +60,7 @@ class AiService {
       buffer.writeln('- Father: ${user.fatherHeightCm} cm, Mother: ${user.motherHeightCm} cm');
       buffer.writeln('- Activity: ${user.activityDaysPerWeek} days/week (${user.activityLevel})');
       buffer.writeln('- Avg sleep: ${user.averageSleepHours} hours/night');
-      buffer.writeln('- Predicted potential: ${predicted.toStringAsFixed(1)} cm');
+      buffer.writeln('- Predicted potential: ${predicted.peakHeight.toStringAsFixed(1)} cm');
       buffer.writeln();
 
       buffer.writeln('PLAN PROGRESS:');
@@ -136,12 +138,17 @@ class AiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final message = data['choices'][0]['message'];
-        var content = message['content'] ?? '';
-        var reasoning = message['reasoning_content'] ?? '';
-        // DeepSeek models prefix reasoning with "Thinking." — strip it
-        reasoning = reasoning.replaceFirst(RegExp(r'^Thinking\.\s*\d*\.\s*'), '').trim();
-        // Use content if available, otherwise fall back to cleaned reasoning
-        final answer = content.trim().isNotEmpty ? content.trim() : reasoning;
+        
+        // Return only the main content, stripping any embedded reasoning 
+        // that might be present in the content field itself for some models.
+        var answer = (message['content'] ?? '').toString().trim();
+        
+        // If content is empty but reasoning exists, it means the model 
+        // only output reasoning (unlikely for final answer but possible)
+        if (answer.isEmpty && message['reasoning_content'] != null) {
+          answer = message['reasoning_content'].toString().trim();
+        }
+
         return answer.isNotEmpty
             ? answer
             : 'Sorry, I couldn\'t generate a response. Please try again.';

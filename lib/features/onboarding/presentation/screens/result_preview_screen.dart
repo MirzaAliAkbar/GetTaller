@@ -29,14 +29,14 @@ class ResultPreviewScreen extends ConsumerWidget {
 
     final potentialGain = HeightCalculator.calculateHeightGain(
       currentHeightCm: data.currentHeightCm,
-      predictedHeightCm: predicted,
+      predictedHeightCm: predicted.peakHeight,
     );
 
     final completion = HeightCalculator.calculateGrowthCompletion(
       ageYears: data.ageYears,
       isMale: data.isMale,
       currentHeightCm: data.currentHeightCm,
-      predictedHeightCm: predicted,
+      predictedHeightCm: predicted.peakHeight,
     );
 
     return Scaffold(
@@ -92,7 +92,7 @@ class ResultPreviewScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '${predicted.toStringAsFixed(1)} cm',
+                      '${predicted.peakHeight.toStringAsFixed(1)} cm',
                       style: GoogleFonts.inter(
                         fontSize: 48,
                         fontWeight: FontWeight.w700,

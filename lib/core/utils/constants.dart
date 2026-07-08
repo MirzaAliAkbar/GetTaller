@@ -4,7 +4,7 @@ class AppConstants {
 
   // ── App Info ──
   static const String appName = 'GetTaller';
-  static const String packageName = 'com.gettaller.app';
+  static const String packageName = 'com.grayonix.GetTaller';
   static const int appVersion = 1;
   static const String appVersionName = '1.0.0';
 

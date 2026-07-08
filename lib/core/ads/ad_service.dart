@@ -150,12 +150,16 @@ class AdService {
   Future<bool> showRewardedAd() async {
     if (_rewardedAd == null) return false;
 
+    final completer = Completer<bool>();
     _rewardedAd!.show(
       onUserEarnedReward: (ad, reward) {
         onRewardEarned?.call();
+        if (!completer.isCompleted) completer.complete(true);
       },
     );
-    return true;
+    
+    // Safety timeout or fallback if callback doesn't fire as expected
+    return completer.future.timeout(const Duration(seconds: 60), onTimeout: () => true);
   }
 
   // ══════════════════════════════════════════════════════════════

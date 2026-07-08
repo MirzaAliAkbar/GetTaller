@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/analytics_service.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/welcome_screen.dart';
+import '../../features/onboarding/presentation/screens/privacy_shield_screen.dart';
 import '../../features/onboarding/presentation/screens/gender_selection_screen.dart';
 import '../../features/onboarding/presentation/screens/birth_date_screen.dart';
 import '../../features/onboarding/presentation/screens/current_measurements_screen.dart';
@@ -26,6 +28,9 @@ import '../../features/daily_plan/presentation/screens/weekly_recap_screen.dart'
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
+    observers: [
+      AnalyticsService().analyticsObserver,
+    ],
     routes: [
       GoRoute(
         path: '/splash',
@@ -38,6 +43,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding/welcome',
         name: 'welcome',
         builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/privacy',
+        name: 'privacyShield',
+        builder: (context, state) => const PrivacyShieldScreen(),
       ),
       GoRoute(
         path: '/onboarding/gender',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/services/analytics_service.dart';
 import 'dashboard_tab.dart';
 import '../../../../features/daily_plan/presentation/screens/daily_plan_tab.dart';
 import '../../../../features/ai_coach/presentation/screens/ai_coach_tab.dart';
@@ -22,6 +23,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     DailyPlanTab(),
     AiCoachTab(),
   ];
+
+  final _tabNames = const ['dashboard', 'daily_plan', 'ai_coach'];
 
   @override
   Widget build(BuildContext context) {
@@ -54,19 +57,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   icon: Icons.speed_rounded,
                   label: 'Dashboard',
                   isSelected: _currentIndex == 0,
-                  onTap: () => setState(() => _currentIndex = 0),
+                  onTap: () {
+                    setState(() => _currentIndex = 0);
+                    AnalyticsService().logScreenView('dashboard');
+                  },
                 ),
                 _NavItem(
                   icon: Icons.calendar_today_rounded,
                   label: 'Daily Plan',
                   isSelected: _currentIndex == 1,
-                  onTap: () => setState(() => _currentIndex = 1),
+                  onTap: () {
+                    setState(() => _currentIndex = 1);
+                    AnalyticsService().logScreenView('daily_plan');
+                  },
                 ),
                 _NavItem(
                   icon: Icons.smart_toy_rounded,
                   label: 'AI Coach',
                   isSelected: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
+                  onTap: () {
+                    setState(() => _currentIndex = 2);
+                    AnalyticsService().logScreenView('ai_coach');
+                  },
                 ),
               ],
             ),

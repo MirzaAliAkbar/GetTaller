@@ -142,9 +142,9 @@ class _WeeklyRecapScreenState extends ConsumerState<WeeklyRecapScreen>
 
   Widget _buildSleepSection(Map<String, dynamic> data) {
     final hasData = data['hasData'] as bool;
-    final avgHours = data['avgHours'] as double;
-    final avgQuality = data['avgQuality'] as double;
-    final daysLogged = data['daysLogged'] as int;
+    final avgHours = (data['avgHours'] as num?)?.toDouble() ?? 0;
+    final avgQuality = (data['avgQuality'] as num?)?.toDouble() ?? 0;
+    final daysLogged = (data['daysLogged'] as num?)?.toInt() ?? 0;
     final missedDays = data['missedDays'] as List<String>;
 
     String rating;
@@ -186,9 +186,9 @@ class _WeeklyRecapScreenState extends ConsumerState<WeeklyRecapScreen>
 
   Widget _buildMealSection(Map<String, dynamic> data) {
     final hasData = data['hasData'] as bool;
-    final avgCal = data['avgCalories'] as int;
-    final avgProtein = data['avgProtein'] as double;
-    final daysLogged = data['daysLogged'] as int;
+    final avgCal = (data['avgCalories'] as num?)?.toInt() ?? 0;
+    final avgProtein = (data['avgProtein'] as num?)?.toDouble() ?? 0;
+    final daysLogged = (data['daysLogged'] as num?)?.toInt() ?? 0;
     final missedDays = data['missedDays'] as List<String>;
 
     String rating;

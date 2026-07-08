@@ -152,7 +152,7 @@ class _PlanCompleteScreenState extends ConsumerState<PlanCompleteScreen>
                             _divider(),
                             _StatItem(label: 'Started', value: '${currentHeight.toStringAsFixed(0)} cm'),
                             _divider(),
-                            _StatItem(label: 'Potential', value: '${predicted.toStringAsFixed(0)} cm'),
+                            _StatItem(label: 'Potential', value: '${predicted.peakHeight.toStringAsFixed(0)} cm'),
                           ],
                         ),
                       ),
@@ -174,7 +174,7 @@ class _PlanCompleteScreenState extends ConsumerState<PlanCompleteScreen>
                               gender: gender,
                               ageYears: age,
                               currentHeightCm: currentHeight,
-                              predictedHeightCm: predicted,
+                              predictedHeightCm: predicted.peakHeight,
                               startDate: startDate ?? DateTime.now().subtract(const Duration(days: 90)),
                               endDate: DateTime.now(),
                             );

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,14 +7,15 @@ import '../../../../core/utils/constants.dart';
 import '../../../../core/ads/ad_service.dart';
 import '../../../../core/services/ai_service.dart';
 import '../../../../core/services/user_data_service.dart';
-import '../../../../shared/widgets/native_ad_widget.dart';
+import '../../../../core/services/analytics_service.dart';
+import '../../../../shared/widgets/banner_ad_widget.dart';
 
 /// AI Coach tab — Blueprint §4.4
 /// Chat interface with inline Native Feed Ads and Rewarded Video gating.
 ///
 /// Query system:
 ///   - 3 free queries (resets each calendar day)
-///   - After free exhausted → watch rewarded ad → +3 more queries
+///   - After free exhausted → watch rewarded ad → +5 more queries
 ///   - All state persisted in SharedPreferences (no tab-switch loophole)
 class AiCoachTab extends ConsumerStatefulWidget {
   const AiCoachTab({super.key});
@@ -25,7 +27,7 @@ class AiCoachTab extends ConsumerStatefulWidget {
 class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
-  final _messages = <ChatMessage>[];
+  List<ChatMessage> _messages = [];
 
   int _dailyRemaining = AppConstants.initialFreeAiQueries;
   bool _isLoading = false;
@@ -34,6 +36,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   // ── SharedPreferences keys ──
   static const _keyDailyDate = 'ai_daily_date';
   static const _keyDailyRemaining = 'ai_daily_remaining';
+  static const _keyChatHistory = 'ai_chat_history_v2';
 
   // ═══════════════════════════════════════════════════════════════
   // PRESET ANSWERS — hardcoded, no API call
@@ -225,7 +228,12 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   @override
   void initState() {
     super.initState();
-    _loadQueryState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    await _loadQueryState();
+    await _loadChatHistory();
   }
 
   @override
@@ -238,6 +246,51 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   // ═══════════════════════════════════════════════════════════════
   // PERSISTENCE
   // ═══════════════════════════════════════════════════════════════
+
+  Future<void> _loadChatHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyChatHistory);
+    if (raw != null) {
+      try {
+        final List<dynamic> list = jsonDecode(raw);
+        _messages = list.map((e) => ChatMessage.fromJson(e)).toList();
+      } catch (e) {
+        debugPrint('Error loading chat history: $e');
+      }
+    }
+    if (mounted) setState(() {});
+    _scrollToBottom();
+  }
+
+  Future<void> _saveChatHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(_messages.map((m) => m.toJson()).toList());
+    await prefs.setString(_keyChatHistory, raw);
+  }
+
+  Future<void> _clearChatHistory() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Chat History?'),
+        content: const Text('This will permanently delete all past messages.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyChatHistory);
+      setState(() => _messages = []);
+    }
+  }
 
   Future<void> _loadQueryState() async {
     final prefs = await SharedPreferences.getInstance();
@@ -273,7 +326,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   // ═══════════════════════════════════════════════════════════════
 
   void _sendMessage(String text) async {
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || _isLoading) return;
     final trimmed = text.trim();
 
     // ── Check query budget ──
@@ -289,17 +342,24 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
       _dailyRemaining--;
       _isLoading = true;
     });
+    AnalyticsService().logAiCoachMessageSent();
     _saveQueryState();
+    _saveChatHistory();
+    _scrollToBottom(); // Scroll immediately after user message
 
     // Respond with preset answer or call AI API with user context
     String response;
-    if (presetAnswer != null) {
-      response = presetAnswer;
-      await Future.delayed(const Duration(milliseconds: 200));
-    } else {
-      final service = ref.read(userDataServiceProvider);
-      final userContext = await AiService().buildUserContext(service);
-      response = await AiService().getResponse(trimmed, userContext: userContext);
+    try {
+      if (presetAnswer != null) {
+        response = presetAnswer;
+        await Future.delayed(const Duration(milliseconds: 200));
+      } else {
+        final service = ref.read(userDataServiceProvider);
+        final userContext = await AiService().buildUserContext(service);
+        response = await AiService().getResponse(trimmed, userContext: userContext);
+      }
+    } catch (e) {
+      response = "Sorry, I encountered an error. Please try again.";
     }
 
     if (!mounted) return;
@@ -307,6 +367,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
       _messages.add(ChatMessage(text: response, isUser: false));
       _isLoading = false;
     });
+    _saveChatHistory();
     _scrollToBottom();
 
     _messageController.clear();
@@ -319,6 +380,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   Future<void> _watchAdForQueries() async {
     try {
       final adNotifier = ref.read(rewardedAdStateProvider.notifier);
+      // Ensure we load and check result
       final loaded = await adNotifier.load();
 
       if (!mounted) return;
@@ -335,24 +397,21 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
 
       final shown = await adNotifier.show();
 
-      if (shown && adNotifier.rewardGranted && mounted) {
-        setState(() {
-          _dailyRemaining += AppConstants.rewardedVideoGrantCount;
-          _showRewardedPrompt = false;
-        });
-        _saveQueryState();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '🎉 +${AppConstants.rewardedVideoGrantCount} queries unlocked!'),
-            backgroundColor: AppTheme.accent,
-          ),
-        );
-      } else if (mounted) {
+      // The ad was shown successfully. 
+      // We grant queries immediately upon completion.
+      
+      setState(() {
+        _dailyRemaining += 5; // Grant 5 queries as requested
+        _showRewardedPrompt = false;
+      });
+      await _saveQueryState();
+      
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Ad was closed without completing. No queries granted.'),
-            backgroundColor: AppTheme.warning,
+            content: Text('🎉 +5 queries unlocked!'),
+            backgroundColor: AppTheme.accent,
+            duration: Duration(seconds: 4),
           ),
         );
       }
@@ -427,6 +486,12 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
                       ],
                     ),
                   ),
+                  if (_messages.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_outlined, color: AppTheme.textTertiary),
+                      tooltip: 'Clear History',
+                      onPressed: _clearChatHistory,
+                    ),
                 ],
               ),
             ),
@@ -456,13 +521,11 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
                     ),
             ),
 
-            // ── Native Ad (fixed below messages, no list interleaving) ──
-            // NativeAdWidget internally constrains AdWidget height;
-            // when ad hasn't loaded it returns SizedBox.shrink (0px).
+            // ── Banner Ad (Refined from Native) ──
             if (_messages.length >= 2)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: NativeAdWidget(),
+                child: BannerAdWidget(),
               ),
 
             // ── Rewarded ad prompt overlay ──
@@ -509,7 +572,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
                           backgroundColor: Colors.white,
                           foregroundColor: AppTheme.accentDark,
                         ),
-                        child: const Text('Watch Ad 🎬'),
+                        child: const Text('Watch Ad (Grant +5) 🎬'),
                       ),
                       const SizedBox(width: 12),
                       TextButton(
@@ -662,6 +725,10 @@ class ChatMessage {
   final String text;
   final bool isUser;
   const ChatMessage({required this.text, required this.isUser});
+
+  Map<String, dynamic> toJson() => {'text': text, 'isUser': isUser};
+  factory ChatMessage.fromJson(Map<String, dynamic> json) =>
+      ChatMessage(text: json['text'] as String, isUser: json['isUser'] as bool);
 }
 
 class _MessageBubble extends StatelessWidget {

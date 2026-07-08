@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'hive_service.dart';
 
 /// Persisted user data model — saved to SharedPreferences as JSON.
 class PersistedUserData {
   final String? name;
   final String gender; // 'male' | 'female'
   final int birthYear;
+  final int birthMonth;
   final double currentHeightCm;
   final double currentWeightKg;
   final double fatherHeightCm;
@@ -21,6 +24,7 @@ class PersistedUserData {
     this.name,
     required this.gender,
     required this.birthYear,
+    this.birthMonth = 1,
     required this.currentHeightCm,
     required this.currentWeightKg,
     required this.fatherHeightCm,
@@ -43,6 +47,7 @@ class PersistedUserData {
         'name': name,
         'gender': gender,
         'birthYear': birthYear,
+        'birthMonth': birthMonth,
         'currentHeightCm': currentHeightCm,
         'currentWeightKg': currentWeightKg,
         'fatherHeightCm': fatherHeightCm,
@@ -59,6 +64,7 @@ class PersistedUserData {
         name: json['name'] as String?,
         gender: json['gender'] as String? ?? 'male',
         birthYear: json['birthYear'] as int? ?? 2005,
+        birthMonth: json['birthMonth'] as int? ?? 1,
         currentHeightCm: (json['currentHeightCm'] as num?)?.toDouble() ?? 160,
         currentWeightKg: (json['currentWeightKg'] as num?)?.toDouble() ?? 55,
         fatherHeightCm: (json['fatherHeightCm'] as num?)?.toDouble() ?? 175,
@@ -213,6 +219,41 @@ class UserDataService {
   static const _keySleepEntries = 'sleep_entries';
   static const _keyStreakData = 'streak_data';
   static const _keyCompletedLevels = 'completed_levels';
+  static const _keyHiveMigrated = 'hive_migrated_v2';
+
+  // ── Legacy Migration ──
+
+  /// One-time migration of legacy SharedPreferences lists into Hive.
+  ///
+  /// Must run at startup (after [HiveService.init]) BEFORE any reads or
+  /// writes. Doing it lazily in the read path stranded legacy data whenever
+  /// a write happened before the first read (the box was no longer empty, so
+  /// the migration branch never fired).
+  Future<void> migrateLegacyDataIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_keyHiveMigrated) == true) return;
+
+    await _migrateList(prefs, _keyHeightMeasurements, HiveService.heightBox);
+    await _migrateList(prefs, _keyMealEntries, HiveService.mealsBox);
+    await _migrateList(prefs, _keySleepEntries, HiveService.sleepBox);
+
+    await prefs.setBool(_keyHiveMigrated, true);
+  }
+
+  Future<void> _migrateList(SharedPreferences prefs, String key, Box box) async {
+    final raw = prefs.getString(key);
+    if (raw == null) return;
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      for (final e in list) {
+        await box.add(Map<String, dynamic>.from(e as Map));
+      }
+      await prefs.remove(key);
+    } catch (_) {
+      // Corrupt legacy blob — drop it so we don't retry forever.
+      await prefs.remove(key);
+    }
+  }
 
   // ── Streak Tracking ──
 
@@ -290,26 +331,19 @@ class UserDataService {
 
   Future<void> addHeightMeasurement(double heightCm) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await getHeightMeasurements();
-    existing.add(HeightEntry(date: DateTime.now(), heightCm: heightCm));
-    await prefs.setString(
-        _keyHeightMeasurements, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    final entry = HeightEntry(date: DateTime.now(), heightCm: heightCm);
+    
+    // Save to Hive
+    await HiveService.heightBox.add(entry.toJson());
+    
     await prefs.setString(
         _keyLastMeasurementDate, DateTime.now().toIso8601String().split('T').first);
   }
 
   Future<List<HeightEntry>> getHeightMeasurements() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyHeightMeasurements);
-    if (raw == null) return [];
-    try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => HeightEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
+    return HiveService.heightBox.values
+        .map((e) => HeightEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<DateTime?> getLastMeasurementDate() async {
@@ -418,25 +452,13 @@ class UserDataService {
   // ── Meal Entries ──
 
   Future<void> saveMealEntry(MealEntry entry) async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = await getMealEntries();
-    existing.add(entry);
-    await prefs.setString(
-        _keyMealEntries, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    await HiveService.mealsBox.add(entry.toJson());
   }
 
   Future<List<MealEntry>> getMealEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyMealEntries);
-    if (raw == null) return [];
-    try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => MealEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
+    return HiveService.mealsBox.values
+        .map((e) => MealEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<List<MealEntry>> getTodayMealEntries() async {
@@ -453,25 +475,13 @@ class UserDataService {
   // ── Sleep Entries ──
 
   Future<void> saveSleepEntry(SleepEntry entry) async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = await getSleepEntries();
-    existing.add(entry);
-    await prefs.setString(
-        _keySleepEntries, jsonEncode(existing.map((e) => e.toJson()).toList()));
+    await HiveService.sleepBox.add(entry.toJson());
   }
 
   Future<List<SleepEntry>> getSleepEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keySleepEntries);
-    if (raw == null) return [];
-    try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => SleepEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
+    return HiveService.sleepBox.values
+        .map((e) => SleepEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<List<SleepEntry>> getThisWeekSleepEntries() async {

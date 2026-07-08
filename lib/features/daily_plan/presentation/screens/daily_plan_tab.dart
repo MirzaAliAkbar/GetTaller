@@ -4,12 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/user_data_service.dart';
+import '../../../../core/utils/nutrition_goals.dart';
 import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../exercises/data/exercise_database.dart';
-import '../providers/weekly_summary_providers.dart';
 
 /// Daily Plan tab — Blueprint §4.3
 /// Three sub-tabs: Exercises, Nutrition, Sleep
@@ -29,33 +28,8 @@ class _DailyPlanTabState extends ConsumerState<DailyPlanTab>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _checkWeeklyRecap();
-  }
-
-  Future<void> _checkWeeklyRecap() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    final lastRecap = prefs.getString('last_recap_shown_date');
-    final now = DateTime.now();
-
-    bool shouldShow = false;
-    if (lastRecap == null) {
-      shouldShow = true;
-    } else {
-      final lastDate = DateTime.tryParse(lastRecap);
-      if (lastDate != null) {
-        final lastWeekStart = lastDate.subtract(Duration(days: lastDate.weekday - 1));
-        final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-        shouldShow = currentWeekStart.isAfter(lastWeekStart);
-      } else {
-        shouldShow = true;
-      }
-    }
-
-    if (shouldShow && mounted) {
-      context.push('/weekly-recap');
-    }
+    // Weekly recap is no longer auto-shown here — it's surfaced via a Monday
+    // badge on the dashboard (see weeklyRecapBadgeProvider).
   }
 
   @override
@@ -302,7 +276,7 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
     List<ExerciseInfo> exercises, bool isCompleted,
   ) {
     final totalDuration = exercises.fold<int>(0, (s, e) => s + e.durationSeconds * e.setsCount);
-    final totalMinutes = ((totalDuration / 60) + exercises.length * 0.5).ceil(); // exercise + rest approx
+    final double totalMinutes = ((totalDuration / 60.0) + (exercises.length.toDouble() * 0.5)).ceilToDouble(); // exercise + rest approx
 
     return Container(
       width: double.infinity,
@@ -426,7 +400,7 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
             children: [
               Icon(Icons.timer_outlined, size: 14, color: AppTheme.textTertiary),
               const SizedBox(width: 4),
-              Text('~$totalMinutes min total', style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
+              Text('~${totalMinutes.toInt()} min total', style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
               const SizedBox(width: 16),
               Icon(Icons.hourglass_empty_rounded, size: 14, color: AppTheme.textTertiary),
               const SizedBox(width: 4),
@@ -802,6 +776,17 @@ class _NutritionTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mealsAsync = ref.watch(todayMealEntriesProvider);
 
+    // Personalized daily goals based on the user's age, sex, weight & activity.
+    final userData = ref.watch(persistedUserDataProvider).asData?.value;
+    final goals = userData != null
+        ? NutritionGoals.forUser(
+            ageYears: userData.ageYears,
+            isMale: userData.isMale,
+            weightKg: userData.currentWeightKg,
+            activityDaysPerWeek: userData.activityDaysPerWeek,
+          )
+        : NutritionGoals.fallback;
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
@@ -809,12 +794,12 @@ class _NutritionTab extends ConsumerWidget {
         mealsAsync.when(
           data: (meals) {
             final totalCal = meals.fold<int>(0, (s, m) => s + m.calories);
-            final totalProtein = meals.fold<double>(0, (s, m) => s + m.protein);
-            final totalCalcium = meals.fold<double>(0, (s, m) => s + m.calcium);
-            return _buildSummary(totalCal, totalProtein, totalCalcium);
+            final double totalProtein = meals.fold<double>(0, (s, m) => s + m.protein);
+            final double totalCalcium = meals.fold<double>(0, (s, m) => s + m.calcium);
+            return _buildSummary(totalCal, totalProtein, totalCalcium, goals);
           },
-          loading: () => _buildSummary(0, 0, 0),
-          error: (_, __) => _buildSummary(0, 0, 0),
+          loading: () => _buildSummary(0, 0.0, 0.0, goals),
+          error: (_, __) => _buildSummary(0, 0.0, 0.0, goals),
         ),
         const SizedBox(height: 16),
 
@@ -864,7 +849,7 @@ class _NutritionTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummary(int totalCal, double totalProtein, double totalCalcium) {
+  Widget _buildSummary(int totalCal, double totalProtein, double totalCalcium, NutritionGoals goals) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -877,11 +862,33 @@ class _NutritionTab extends ConsumerWidget {
       ),
       child: Column(children: [
         const Text('Today\'s Nutrition', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        if (goals.bandLabel.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            'Goals tuned for ${goals.bandLabel}',
+            style: const TextStyle(fontSize: 11, color: AppTheme.textTertiary, fontWeight: FontWeight.w500),
+          ),
+        ],
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-          _NutrientBadge(label: 'Calories', value: '$totalCal', target: '2,200', color: AppTheme.energyOrange),
-          _NutrientBadge(label: 'Protein', value: '${totalProtein.toStringAsFixed(0)}g', target: '110g', color: AppTheme.accent),
-          _NutrientBadge(label: 'Calcium', value: '${totalCalcium.toStringAsFixed(0)}mg', target: '1,000mg', color: AppTheme.info),
+          _NutrientBadge(
+            label: 'Calories',
+            value: '$totalCal',
+            target: NutritionGoals.withThousands(goals.calories),
+            color: AppTheme.energyOrange,
+          ),
+          _NutrientBadge(
+            label: 'Protein',
+            value: '${totalProtein.toStringAsFixed(0)}g',
+            target: '${goals.protein}g',
+            color: AppTheme.accent,
+          ),
+          _NutrientBadge(
+            label: 'Calcium',
+            value: '${totalCalcium.toStringAsFixed(0)}mg',
+            target: '${NutritionGoals.withThousands(goals.calcium)}mg',
+            color: AppTheme.info,
+          ),
         ]),
       ]),
     );

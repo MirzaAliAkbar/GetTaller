@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../providers/onboarding_provider.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -17,6 +18,12 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   final _nameController = TextEditingController();
   bool _nameEntered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService().logOnboardingStep(1, 'welcome');
+  }
 
   @override
   void dispose() {
@@ -33,7 +40,45 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       await prefs.setString('user_display_name', name);
     }
     if (!mounted) return;
-    context.go('/onboarding/gender');
+    
+    // Show Medical Disclaimer before proceeding
+    final proceed = await _showDisclaimer(context);
+    if (proceed != true) return;
+    
+    if (!mounted) return;
+    context.go('/onboarding/privacy');
+  }
+
+  Future<bool?> _showDisclaimer(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Medical Disclaimer'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'GetTaller is for informational and educational purposes only. '
+            'It is not a medical device and does not diagnose, treat, cure, or prevent any disease.\n\n'
+            'Height growth is influenced by genetics, nutrition, sleep, and exercise. '
+            'Results vary from person to person. The predictions and suggestions provided '
+            'are estimates based on scientific averages and should not be taken as guarantees.\n\n'
+            'Always consult with a qualified healthcare provider before starting any '
+            'nutrition, exercise, or sleep program, especially for growing children and teenagers.',
+            style: TextStyle(fontSize: 14, height: 1.5),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('I Understand & Agree'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

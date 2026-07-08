@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.gettaller" "\0"
-            VALUE "FileDescription", "gettaller_app" "\0"
+            VALUE "CompanyName", "com.grayonix" "\0"
+            VALUE "FileDescription", "GetTaller" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "gettaller_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.gettaller. All rights reserved." "\0"
-            VALUE "OriginalFilename", "gettaller_app.exe" "\0"
-            VALUE "ProductName", "gettaller_app" "\0"
+            VALUE "InternalName", "GetTaller" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.grayonix. All rights reserved." "\0"
+            VALUE "OriginalFilename", "GetTaller.exe" "\0"
+            VALUE "ProductName", "GetTaller" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -8,6 +8,7 @@ import '../../../../core/utils/constants.dart';
 import '../../../../core/ads/ad_service.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../providers/onboarding_provider.dart';
 
 /// Final onboarding screen — "Your 90-Day Growth Plan is ready"
@@ -32,6 +33,7 @@ class _YourPlanScreenState extends ConsumerState<YourPlanScreen> {
         name: onboardingData.name,
         gender: onboardingData.gender,
         birthYear: onboardingData.birthDate.year,
+        birthMonth: onboardingData.birthDate.month,
         currentHeightCm: onboardingData.currentHeightCm,
         currentWeightKg: onboardingData.currentWeightKg,
         fatherHeightCm: onboardingData.fatherHeightCm,
@@ -49,6 +51,8 @@ class _YourPlanScreenState extends ConsumerState<YourPlanScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConstants.prefOnboardingComplete, true);
+
+    AnalyticsService().logOnboardingCompleted();
 
     final adService = ref.read(adServiceProvider);
     await adService.loadInterstitialAd();

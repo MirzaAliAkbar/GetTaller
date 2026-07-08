@@ -1,11 +1,16 @@
 # GetTaller
-My android App
+
+A Flutter app for height growth tracking.
 
 ## Getting Started
-This is a production-ready height increase tracking app built with Flutter.
 
-## Key Features
-- **Momentum Prediction**: Advanced height prediction using Khamis-Roche principles.
-- **Privacy First**: 100% local storage with Hive, no sign-up or cloud required.
-- **Dynamic Charting**: Age-aware growth visualization.
-- **AI Coach**: Personalized growth optimization advice.
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.

@@ -26,17 +26,17 @@ class BirthDateScreen extends ConsumerWidget {
             children: [
               _buildProgressBar(2, 13),
               const SizedBox(height: AppConstants.spacingXxl),
-              Text("What year were you born?",
+              Text("When were you born?",
                   style: Theme.of(context).textTheme.headlineLarge),
               const SizedBox(height: AppConstants.spacingSm),
               Text(
-                "Just the year — we calculate your age from it.",
+                "We use your birth year and month to track your precise growth window.",
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppConstants.spacingXl),
-              Expanded(
+              const Expanded(
                 child: Center(
-                  child: _YearPickerCard(),
+                  child: _BirthDatePicker(),
                 ),
               ),
             ],
@@ -67,30 +67,42 @@ class BirthDateScreen extends ConsumerWidget {
   }
 }
 
-class _YearPickerCard extends ConsumerStatefulWidget {
+class _BirthDatePicker extends ConsumerStatefulWidget {
+  const _BirthDatePicker();
+
   @override
-  ConsumerState<_YearPickerCard> createState() => _YearPickerCardState();
+  ConsumerState<_BirthDatePicker> createState() => _BirthDatePickerState();
 }
 
-class _YearPickerCardState extends ConsumerState<_YearPickerCard> {
-  late final FixedExtentScrollController _scrollController;
-  int _selectedIndex = 30; // Default ~1990
+class _BirthDatePickerState extends ConsumerState<_BirthDatePicker> {
+  late final FixedExtentScrollController _yearController;
+  late final FixedExtentScrollController _monthController;
+  
+  int _selectedYearIndex = 45; // Default ~2005
+  int _selectedMonthIndex = 6; // July
 
   static const int _startYear = 1960;
-  static const int _endYear = 2020;
+  final int _endYear = DateTime.now().year;
 
   List<int> get _years =>
       List.generate(_endYear - _startYear + 1, (i) => _startYear + i);
+      
+  static const _months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   @override
   void initState() {
     super.initState();
-    _scrollController = FixedExtentScrollController(initialItem: _selectedIndex);
+    _yearController = FixedExtentScrollController(initialItem: _selectedYearIndex);
+    _monthController = FixedExtentScrollController(initialItem: _selectedMonthIndex);
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _yearController.dispose();
+    _monthController.dispose();
     super.dispose();
   }
 
@@ -102,45 +114,76 @@ class _YearPickerCardState extends ConsumerState<_YearPickerCard> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Year spinner
-        Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceCard,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: ListWheelScrollView.useDelegate(
-            controller: _scrollController,
-            itemExtent: 56,
-            perspective: 0.003,
-            diameterRatio: 1.5,
-            onSelectedItemChanged: (index) {
-              setState(() => _selectedIndex = index);
-            },
-            childDelegate: ListWheelChildBuilderDelegate(
-              childCount: years.length,
-              builder: (context, index) {
-                final year = years[index];
-                final isSelected = index == _selectedIndex;
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Center(
-                    child: Text(
-                      '$year',
-                      style: GoogleFonts.inter(
-                        fontSize: isSelected ? 32 : 20,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w400,
-                        color: isSelected
-                            ? AppTheme.accent
-                            : AppTheme.textTertiary,
-                      ),
-                    ),
+        Row(
+          children: [
+            // Month spinner
+            Expanded(
+              flex: 3,
+              child: Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceCard,
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
+                ),
+                child: ListWheelScrollView.useDelegate(
+                  controller: _monthController,
+                  itemExtent: 56,
+                  onSelectedItemChanged: (index) => setState(() => _selectedMonthIndex = index),
+                  childDelegate: ListWheelChildBuilderDelegate(
+                    childCount: _months.length,
+                    builder: (context, index) {
+                      final month = _months[index];
+                      final isSelected = index == _selectedMonthIndex;
+                      return Center(
+                        child: Text(
+                          month,
+                          style: GoogleFonts.inter(
+                            fontSize: isSelected ? 20 : 16,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                            color: isSelected ? AppTheme.accent : AppTheme.textTertiary,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ),
             ),
-          ),
+            
+            // Year spinner
+            Expanded(
+              flex: 2,
+              child: Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceCard.withOpacity(0.5),
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(24)),
+                ),
+                child: ListWheelScrollView.useDelegate(
+                  controller: _yearController,
+                  itemExtent: 56,
+                  onSelectedItemChanged: (index) => setState(() => _selectedYearIndex = index),
+                  childDelegate: ListWheelChildBuilderDelegate(
+                    childCount: years.length,
+                    builder: (context, index) {
+                      final year = years[index];
+                      final isSelected = index == _selectedYearIndex;
+                      return Center(
+                        child: Text(
+                          '$year',
+                          style: GoogleFonts.inter(
+                            fontSize: isSelected ? 24 : 18,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                            color: isSelected ? AppTheme.accent : AppTheme.textTertiary,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
 
         const SizedBox(height: AppConstants.spacingXxl),
@@ -151,10 +194,11 @@ class _YearPickerCardState extends ConsumerState<_YearPickerCard> {
           height: 56,
           child: ElevatedButton(
             onPressed: () {
-              final selectedYear = years[_selectedIndex];
-              // Use July 1 as the default birth date
+              final selectedYear = years[_selectedYearIndex];
+              final selectedMonth = _selectedMonthIndex + 1;
+              
               ref.read(onboardingProvider.notifier).setBirthDate(
-                    DateTime(selectedYear, 7, 1),
+                    DateTime(selectedYear, selectedMonth, 1),
                   );
               context.go('/onboarding/measurements');
             },
