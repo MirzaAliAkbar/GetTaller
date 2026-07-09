@@ -293,18 +293,31 @@ class NotificationService {
       ),
     ];
 
-    final androidSettings = AndroidInitializationSettings(
-      '@drawable/ic_notification',
-    );
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+    try {
+      final androidSettings = AndroidInitializationSettings(
+        '@drawable/ic_notification',
+      );
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
 
-    await _plugin.initialize(
-      InitializationSettings(android: androidSettings, iOS: iosSettings),
-    );
+      await _plugin.initialize(
+        InitializationSettings(android: androidSettings, iOS: iosSettings),
+      );
+    } catch (e) {
+      // Fallback if ic_notification drawable is missing (e.g., in debug APK)
+      print('⚠️ Notification icon initialization failed: $e, using app icon as fallback');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      await _plugin.initialize(
+        InitializationSettings(iOS: iosSettings),
+      );
+    }
 
     // Register all Android notification channels after plugin init
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
