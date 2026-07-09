@@ -195,19 +195,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 TextField(
                   controller: heightController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Height (${UnitConverter.heightUnit()})',
-                    suffixText: UnitConverter.heightUnit(),
-                  ),
+                decoration: InputDecoration(
+                  labelText: 'Height (${UnitConverter.heightUnit()})',
+                  suffixText: UnitConverter.heightUnit(),
+                ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: weightController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Weight (${UnitConverter.weightUnit()})',
-                    suffixText: UnitConverter.weightUnit(),
-                  ),
+                decoration: InputDecoration(
+                  labelText: 'Weight (${UnitConverter.weightUnit()})',
+                  suffixText: UnitConverter.weightUnit(),
+                ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
