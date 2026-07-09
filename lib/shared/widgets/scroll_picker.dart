@@ -8,39 +8,133 @@ class ScrollPicker extends StatelessWidget {
   final int initialIndex;
   final ValueChanged<int> onSelected;
   final double itemExtent;
+  final String? suffix;
 
   const ScrollPicker({
     super.key,
     required this.items,
     required this.onSelected,
     this.initialIndex = 0,
-    this.itemExtent = 40,
+    this.itemExtent = 48,
+    this.suffix,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 150,
-      child: ListWheelScrollView.useDelegate(
-        controller: FixedExtentScrollController(initialItem: initialIndex),
-        itemExtent: itemExtent,
-        physics: const FixedExtentScrollPhysics(),
-        onSelectedItemChanged: onSelected,
-        childDelegate: ListWheelChildBuilderDelegate(
-          childCount: items.length,
-          builder: (context, index) {
-            return Center(
-              child: Text(
-                items[index],
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: AppTheme.accent.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.accent.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Selected item highlight
+          Positioned(
+            top: 66,
+            left: 16,
+            right: 16,
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.accent.withOpacity(0.15),
+                  width: 1,
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          ),
+          // Top/bottom fade gradients
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 60,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Theme.of(context).scaffoldBackgroundColor,
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 60,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Theme.of(context).scaffoldBackgroundColor,
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // The scroll picker
+          ListWheelScrollView.useDelegate(
+            controller: FixedExtentScrollController(initialItem: initialIndex),
+            itemExtent: itemExtent,
+            physics: const FixedExtentScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            onSelectedItemChanged: onSelected,
+            diameterRatio: 1.5,
+            perspective: 0.003,
+            childDelegate: ListWheelChildBuilderDelegate(
+              childCount: items.length,
+              builder: (context, index) {
+                return Center(
+                  child: Text(
+                    items[index],
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary.withOpacity(0.35),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Top indicator line
+          Positioned(
+            top: 65,
+            left: 24,
+            child: Icon(
+              Icons.unfold_more_rounded,
+              size: 16,
+              color: AppTheme.accent.withOpacity(0.4),
+            ),
+          ),
+          // Bottom indicator line
+          Positioned(
+            bottom: 65,
+            left: 24,
+            child: Icon(
+              Icons.unfold_more_rounded,
+              size: 16,
+              color: AppTheme.accent.withOpacity(0.4),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -70,57 +164,192 @@ class DualScrollPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 150,
-      child: Row(
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: AppTheme.accent.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.accent.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Stack(
         children: [
-          Expanded(
-            child: Column(
+          // Labels
+          if (leftLabel.isNotEmpty)
+            Positioned(
+              top: 12,
+              left: 0,
+              right: 0,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        leftLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textTertiary,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        rightLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textTertiary,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                ],
+              ),
+            ),
+          // Selected item highlights
+          Positioned(
+            top: 66,
+            left: 12,
+            right: 12,
+            child: Row(
               children: [
-                if (leftLabel.isNotEmpty)
-                  Text(leftLabel, style: TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
                 Expanded(
-                  child: ListWheelScrollView.useDelegate(
-                    controller: FixedExtentScrollController(initialItem: initialLeftIndex),
-                    itemExtent: 40,
-                    physics: const FixedExtentScrollPhysics(),
-                    onSelectedItemChanged: onLeftChanged,
-                    childDelegate: ListWheelChildBuilderDelegate(
-                      childCount: leftItems.length,
-                      builder: (context, index) => Center(
-                        child: Text(leftItems[index], style: GoogleFonts.inter(
-                          fontSize: 20, fontWeight: FontWeight.w600, color: AppTheme.textPrimary,
-                        )),
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.accent.withOpacity(0.15),
+                        width: 1,
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.accent.withOpacity(0.15),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              children: [
-                if (rightLabel.isNotEmpty)
-                  Text(rightLabel, style: TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
-                Expanded(
-                  child: ListWheelScrollView.useDelegate(
-                    controller: FixedExtentScrollController(initialItem: initialRightIndex),
-                    itemExtent: 40,
-                    physics: const FixedExtentScrollPhysics(),
-                    onSelectedItemChanged: onRightChanged,
-                    childDelegate: ListWheelChildBuilderDelegate(
-                      childCount: rightItems.length,
-                      builder: (context, index) => Center(
-                        child: Text(rightItems[index], style: GoogleFonts.inter(
-                          fontSize: 20, fontWeight: FontWeight.w600, color: AppTheme.textPrimary,
-                        )),
-                      ),
+          // Fade gradients
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 60,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Theme.of(context).scaffoldBackgroundColor,
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 60,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Theme.of(context).scaffoldBackgroundColor,
+                    Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Left picker
+          Positioned(
+            top: 36,
+            left: 12,
+            width: (MediaQuery.of(context).size.width - 80) / 2,
+            height: 108,
+            child: ListWheelScrollView.useDelegate(
+              controller: FixedExtentScrollController(initialItem: initialLeftIndex),
+              itemExtent: 48,
+              physics: const FixedExtentScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              onSelectedItemChanged: onLeftChanged,
+              diameterRatio: 1.5,
+              perspective: 0.003,
+              childDelegate: ListWheelChildBuilderDelegate(
+                childCount: leftItems.length,
+                builder: (context, index) => Center(
+                  child: Text(
+                    leftItems[index],
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary.withOpacity(0.35),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
-              ],
+              ),
+            ),
+          ),
+          // Right picker
+          Positioned(
+            top: 36,
+            right: 12,
+            width: (MediaQuery.of(context).size.width - 80) / 2,
+            height: 108,
+            child: ListWheelScrollView.useDelegate(
+              controller: FixedExtentScrollController(initialItem: initialRightIndex),
+              itemExtent: 48,
+              physics: const FixedExtentScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              onSelectedItemChanged: onRightChanged,
+              diameterRatio: 1.5,
+              perspective: 0.003,
+              childDelegate: ListWheelChildBuilderDelegate(
+                childCount: rightItems.length,
+                builder: (context, index) => Center(
+                  child: Text(
+                    rightItems[index],
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textPrimary.withOpacity(0.35),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

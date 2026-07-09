@@ -127,24 +127,66 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
     final selected = _isMetric == metric;
     return GestureDetector(
       onTap: () => setState(() => _isMetric = metric),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.accent : AppTheme.accent.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? AppTheme.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppTheme.accent : AppTheme.textTertiary.withOpacity(0.3),
+            width: selected ? 2 : 1,
+          ),
+          boxShadow: selected ? [
+            BoxShadow(
+              color: AppTheme.accent.withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ] : [],
         ),
-        child: Text(label, style: TextStyle(
-          color: selected ? Colors.white : AppTheme.accent,
-          fontWeight: FontWeight.w600, fontSize: 14,
-        )),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              metric ? Icons.straighten_rounded : Icons.height_rounded,
+              size: 16,
+              color: selected ? Colors.white : AppTheme.textTertiary,
+            ),
+            const SizedBox(width: 6),
+            Text(label, style: GoogleFonts.inter(
+              color: selected ? Colors.white : AppTheme.textSecondary,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              letterSpacing: 0.3,
+            )),
+          ],
+        ),
       ),
     );
   }
 
   Widget _sectionLabel(String label) {
-    return Text(label, style: GoogleFonts.inter(
-      fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary,
-    ));
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: AppTheme.accent,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(label.toUpperCase(), style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.textTertiary,
+          letterSpacing: 1.5,
+        )),
+      ],
+    );
   }
 
   Widget _buildMetricPicker(int currentValue, ValueChanged<int> onChanged, int startValue) {
