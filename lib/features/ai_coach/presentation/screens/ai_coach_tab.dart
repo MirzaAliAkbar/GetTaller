@@ -784,14 +784,25 @@ class _MessageBubble extends StatelessWidget {
                         )
                       ],
               ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: message.isUser
-                      ? Colors.white
-                      : AppTheme.textPrimary,
-                  height: 1.5,
+              child: RichText(
+                text: _buildFormattedText(
+                  message.text,
+                  baseStyle: TextStyle(
+                    fontSize: 14,
+                    color: message.isUser
+                        ? Colors.white
+                        : AppTheme.textPrimary,
+                    height: 1.5,
+                  ),
+                  boldStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: message.isUser
+                        ? Colors.white
+                        : AppTheme.textPrimary,
+                    height: 1.5,
+                  ),
+                  isUserMessage: message.isUser,
                 ),
               ),
             ),
@@ -800,5 +811,45 @@ class _MessageBubble extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Parse {BOLD}text{/BOLD} markers and create formatted TextSpan
+  TextSpan _buildFormattedText(
+    String text, {
+    required TextStyle baseStyle,
+    required TextStyle boldStyle,
+    required bool isUserMessage,
+  }) {
+    final spans = <TextSpan>[];
+    final pattern = RegExp(r'\{BOLD\}(.*?)\{/BOLD\}');
+    int lastIndex = 0;
+
+    for (final match in pattern.allMatches(text)) {
+      // Add normal text before bold
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: text.substring(lastIndex, match.start),
+          style: baseStyle,
+        ));
+      }
+
+      // Add bold text
+      spans.add(TextSpan(
+        text: match.group(1),
+        style: boldStyle,
+      ));
+
+      lastIndex = match.end;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastIndex),
+        style: baseStyle,
+      ));
+    }
+
+    return TextSpan(children: spans.isEmpty ? [TextSpan(text: text, style: baseStyle)] : spans);
   }
 }

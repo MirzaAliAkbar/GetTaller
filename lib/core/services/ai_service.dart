@@ -10,9 +10,9 @@ class AiService {
   factory AiService() => _instance;
   AiService._();
 
-  // OpenCode Zen API Configuration (DeepSeek V4 Flash Free model)
+  // OpenCode Zen API Configuration (Nemotron 3 Ultra - fast, no overthinking)
   static const _baseUrl = 'https://opencode.ai/zen/v1/chat/completions';
-  static const _model = 'deepseek-v4-flash-free';
+  static const _model = 'nemotron-3-ultra';
 
   // Build-time fallback API key (for development/testing)
   static const _buildTimeApiKey = String.fromEnvironment('OPENCODE_ZEN_API_KEY');
@@ -167,69 +167,34 @@ class AiService {
       if (response.statusCode == 200) {
         try {
           final data = jsonDecode(response.body);
-
-          // Debug logging
-          print('🤖 AI Coach Response: ${response.body}');
-
-          if (data['choices'] == null || (data['choices'] as List).isEmpty) {
-            print('❌ No choices in response');
-            return 'No response from AI. Please check your internet connection.';
-          }
-
           final message = data['choices'][0]['message'];
           var answer = (message['content'] ?? '').toString().trim();
 
-          // If content is empty but reasoning_content exists, extract answer from thinking
-          if (answer.isEmpty && message['reasoning_content'] != null) {
-            print('⚠️ Extracting from reasoning_content');
-            String reasoning = (message['reasoning_content'] ?? '').toString().trim();
-
-            // Try to extract the actual answer (usually after the "thinking" part)
-            // Look for lines that look like answers (contains user-relevant info)
-            List<String> lines = reasoning.split('\n');
-            List<String> answerLines = [];
-
-            for (var line in lines) {
-              line = line.trim();
-              // Skip thinking headers and pure analysis
-              if (line.isNotEmpty &&
-                  !line.startsWith('Thinking.') &&
-                  !line.startsWith('1.') &&
-                  !line.startsWith('2.') &&
-                  !line.startsWith('3.') &&
-                  !line.contains('**Analyze') &&
-                  !line.contains('Wait,') &&
-                  !line.contains('Since no')) {
-                answerLines.add(line);
-              }
-            }
-
-            answer = answerLines.join('\n').trim();
-
-            // If we still got nothing, use raw reasoning but limit it
-            if (answer.isEmpty) {
-              answer = reasoning.substring(0, min(reasoning.length, 300));
-            }
-          }
-
           if (answer.isEmpty) {
-            print('❌ Empty answer from API');
-            return 'AI returned empty response. Please try again.';
+            return 'Could not generate response. Please try again.';
           }
 
-          print('✅ AI Coach Answer: $answer');
+          // Convert markdown bold (**text**) to actual bold formatting
+          answer = _formatMarkdownBold(answer);
+
           return answer;
         } catch (e) {
-          print('❌ JSON Parse Error: $e');
-          print('Response body: ${response.body}');
-          return 'Error parsing response: $e';
+          return 'Error: $e';
         }
       } else {
-        print('❌ API Error ${response.statusCode}: ${response.body}');
         return 'API Error ${response.statusCode}: ${response.reasonPhrase}';
       }
     } catch (e) {
       return 'Network error. Please check your connection and try again.';
     }
+  }
+
+  /// Converts markdown bold (**text**) to marker format for UI rendering
+  String _formatMarkdownBold(String text) {
+    // Convert **text** to {BOLD}text{/BOLD} for easy RichText parsing in UI
+    return text.replaceAllMapped(
+      RegExp(r'\*\*(.*?)\*\*'),
+      (match) => '{BOLD}${match.group(1)}{/BOLD}',
+    );
   }
 }
