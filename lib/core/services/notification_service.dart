@@ -293,10 +293,9 @@ class NotificationService {
       ),
     ];
 
+    // Android notification init with fallback
     try {
-      final androidSettings = AndroidInitializationSettings(
-        '@drawable/ic_notification',
-      );
+      final androidSettings = AndroidInitializationSettings('ic_launcher');
       await _plugin.initialize(
         InitializationSettings(android: androidSettings),
       );
@@ -840,7 +839,7 @@ class NotificationService {
           orElse: () => Importance.defaultImportance,
         ),
         priority: priority,
-        icon: '@drawable/ic_notification',
+          icon: 'ic_launcher',
         largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
       ),
       iOS: const DarwinNotificationDetails(),
