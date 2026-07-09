@@ -9,13 +9,15 @@ class AiService {
   factory AiService() => _instance;
   AiService._();
 
-  // Build-time fallback (for development/testing)
-  static const _buildTimeApiKey = String.fromEnvironment('DEEPSEEK_API_KEY');
+  // OpenCode Zen API Configuration (DeepSeek V4 Flash Free model)
+  static const _baseUrl = 'https://opencode.ai/zen/v1/chat/completions';
+  static const _model = 'deepseek-v4-flash-free';
+
+  // Build-time fallback API key (for development/testing)
+  static const _buildTimeApiKey = String.fromEnvironment('OPENCODE_ZEN_API_KEY');
 
   // Runtime-injected from Remote Config (for production)
   late String _runtimeApiKey;
-  static const _baseUrl = 'https://opencode.ai/zen/v1/chat/completions';
-  static const _model = 'deepseek-v4-flash';
 
   static const _systemPrompt = 'You are GetTaller AI Coach, an expert in height growth, '
       'nutrition, sleep optimization, exercise science, and adolescent development. '
@@ -27,16 +29,16 @@ class AiService {
       'If the user is an adult (25+), focus on posture restoration and spinal health. '
       'If asked about medical conditions, advise consulting a doctor.';
 
-  /// Initialize AI service with Remote Config API key (production)
+  /// Initialize AI service with OpenCode Zen API key from Remote Config (production)
   Future<void> initialize() async {
     try {
       final remoteConfig = RemoteConfigService();
-      _runtimeApiKey = remoteConfig.getDeepSeekApiKey();
+      _runtimeApiKey = remoteConfig.getOpenCodeZenApiKey();
       if (_runtimeApiKey.isEmpty) {
         _runtimeApiKey = _buildTimeApiKey; // Fallback to build-time key
       }
     } catch (e) {
-      print('Failed to load Remote Config API key: $e');
+      print('Failed to load OpenCode Zen API key from Remote Config: $e');
       _runtimeApiKey = _buildTimeApiKey; // Fallback to build-time key
     }
   }

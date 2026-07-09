@@ -12,7 +12,7 @@ class RemoteConfigService {
 
     // Set default values (fallback)
     await _remoteConfig.setDefaults({
-      'deepseek_api_key': '', // Empty default - fallback to build-time key
+      'opencode_zen_api_key': '', // Empty default - fallback to build-time key
       'ai_coach_enabled': true,
     });
 
@@ -30,9 +30,9 @@ class RemoteConfigService {
     }
   }
 
-  /// Get DeepSeek API key from Remote Config (or empty if not set)
-  String getDeepSeekApiKey() {
-    return _remoteConfig.getString('deepseek_api_key');
+  /// Get OpenCode Zen API key from Remote Config (or empty if not set)
+  String getOpenCodeZenApiKey() {
+    return _remoteConfig.getString('opencode_zen_api_key');
   }
 
   /// Check if AI Coach is enabled

@@ -24,10 +24,10 @@ flutter pub get
 ### 2. Run on Your Device
 ```bash
 # Android
-flutter run --dart-define=DEEPSEEK_API_KEY=sk-YOUR-NEW-KEY
+flutter run --dart-define=OPENCODE_ZEN_API_KEY=sk-YOUR-NEW-KEY
 
 # iOS
-flutter run --dart-define=DEEPSEEK_API_KEY=sk-YOUR-NEW-KEY
+flutter run --dart-define=OPENCODE_ZEN_API_KEY=sk-YOUR-NEW-KEY
 ```
 
 ### 3. Test Everything
@@ -42,12 +42,12 @@ flutter run --dart-define=DEEPSEEK_API_KEY=sk-YOUR-NEW-KEY
 
 ### 4. Build Release APK
 ```bash
-flutter build apk --release --dart-define=DEEPSEEK_API_KEY=sk-YOUR-NEW-KEY
+flutter build apk --release --dart-define=OPENCODE_ZEN_API_KEY=sk-YOUR-NEW-KEY
 ```
 
 ### 5. Build Release iOS
 ```bash
-flutter build ios --release --dart-define=DEEPSEEK_API_KEY=sk-YOUR-NEW-KEY
+flutter build ios --release --dart-define=OPENCODE_ZEN_API_KEY=sk-YOUR-NEW-KEY
 ```
 
 ---
