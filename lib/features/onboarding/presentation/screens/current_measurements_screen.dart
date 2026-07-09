@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/utils/unit_converter.dart';
-import '../../../../shared/widgets/scroll_picker.dart';
 
 class CurrentMeasurementsScreen extends ConsumerStatefulWidget {
   const CurrentMeasurementsScreen({super.key});
@@ -16,47 +14,30 @@ class CurrentMeasurementsScreen extends ConsumerStatefulWidget {
 }
 
 class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsScreen> {
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
   bool _isMetric = true;
-  int _selectedHeightCm = 170;
-  int _selectedFeet = 5;
-  int _selectedInches = 7;
-  int _selectedWeightKg = 65;
-  int _selectedWeightLbs = 143;
-
-  // Get gender from onboarding data for defaults
-  bool get _isMale {
-    final data = ref.read(onboardingProvider);
-    return data?.isMale ?? true;
-  }
 
   @override
   void initState() {
     super.initState();
-    // Set defaults based on gender
-    if (_isMale) {
-      _selectedHeightCm = 173;
-      _selectedFeet = 5;
-      _selectedInches = 7;
-      _selectedWeightKg = 70;
-      _selectedWeightLbs = 154;
-    } else {
-      _selectedHeightCm = 162;
-      _selectedFeet = 5;
-      _selectedInches = 4;
-      _selectedWeightKg = 55;
-      _selectedWeightLbs = 121;
-    }
-    // Start with saved preference
     _isMetric = UnitConverter.isMetric;
   }
 
+  @override
+  void dispose() {
+    _heightController.dispose();
+    _weightController.dispose();
+    super.dispose();
+  }
+
   void _submit() {
-    final heightCm = _isMetric
-        ? _selectedHeightCm.toDouble()
-        : (_selectedFeet * 12 + _selectedInches) * 2.54;
-    final weightKg = _isMetric
-        ? _selectedWeightKg.toDouble()
-        : _selectedWeightLbs * 0.453592;
+    final height = double.tryParse(_heightController.text);
+    final weight = double.tryParse(_weightController.text);
+    if (height == null || weight == null) return;
+
+    final heightCm = _isMetric ? height : height * 2.54;
+    final weightKg = _isMetric ? weight : weight * 0.453592;
 
     UnitConverter.setMetric(_isMetric);
 
@@ -69,6 +50,8 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
 
   @override
   Widget build(BuildContext context) {
+    final heightUnit = UnitConverter.heightUnit();
+    final weightUnit = UnitConverter.weightUnit();
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -89,42 +72,37 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
               const SizedBox(height: AppConstants.spacingSm),
               Text("We need your height and weight to calculate your BMI and growth potential.",
                   style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: AppConstants.spacingLg),
+              const SizedBox(height: AppConstants.spacingXxl),
 
               // Unit toggle
               Row(
                 children: [
-                  _unitButton('Metric (cm/kg)', true),
+                  _unitButton('Metric', true),
                   const SizedBox(width: 8),
-                  _unitButton('Imperial (ft/lbs)', false),
+                  _unitButton('Imperial', false),
                 ],
               ),
+              const SizedBox(height: AppConstants.spacingXxl),
+
+              TextField(
+                controller: _heightController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Height ($heightUnit)',
+                  prefixIcon: const Icon(Icons.height_rounded),
+                ),
+              ),
               const SizedBox(height: AppConstants.spacingLg),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Height section
-                      _sectionLabel('Height'),
-                      const SizedBox(height: 8),
-                      _isMetric
-                          ? _buildMetricHeightPicker()
-                          : _buildImperialHeightPicker(),
-                      const SizedBox(height: AppConstants.spacingLg),
-
-                      // Weight section
-                      _sectionLabel('Weight'),
-                      const SizedBox(height: 8),
-                      _isMetric
-                          ? _buildMetricWeightPicker()
-                          : _buildImperialWeightPicker(),
-                    ],
-                  ),
+              TextField(
+                controller: _weightController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Weight ($weightUnit)',
+                  prefixIcon: const Icon(Icons.monitor_weight_rounded),
                 ),
               ),
 
-              const SizedBox(height: AppConstants.spacingLg),
+              const Spacer(),
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -144,107 +122,20 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
     final selected = _isMetric == metric;
     return GestureDetector(
       onTap: () => setState(() => _isMetric = metric),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? AppTheme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.textTertiary.withOpacity(0.3),
-            width: selected ? 2 : 1,
-          ),
-          boxShadow: selected ? [
-            BoxShadow(
-              color: AppTheme.accent.withOpacity(0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ] : [],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              metric ? Icons.straighten_rounded : Icons.height_rounded,
-              size: 16,
-              color: selected ? Colors.white : AppTheme.textTertiary,
-            ),
-            const SizedBox(width: 6),
-            Text(label, style: GoogleFonts.inter(
-              color: selected ? Colors.white : AppTheme.textSecondary,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              letterSpacing: 0.3,
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionLabel(String label) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: AppTheme.accent,
-            borderRadius: BorderRadius.circular(2),
+            color: selected ? AppTheme.accent : AppTheme.textTertiary,
           ),
         ),
-        const SizedBox(width: 10),
-        Text(label.toUpperCase(), style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.textTertiary,
-          letterSpacing: 1.5,
+        child: Text(label, style: TextStyle(
+          color: selected ? Colors.white : AppTheme.textSecondary,
+          fontWeight: FontWeight.w600,
         )),
-      ],
-    );
-  }
-
-  Widget _buildMetricHeightPicker() {
-    final items = List.generate(81, (i) => '${140 + i} cm');
-    return ScrollPicker(
-      items: items,
-      initialIndex: _selectedHeightCm - 140,
-      onSelected: (i) => setState(() => _selectedHeightCm = 140 + i),
-    );
-  }
-
-  Widget _buildImperialHeightPicker() {
-    final feetItems = List.generate(4, (i) => '${4 + i} ft');
-    final inchItems = List.generate(12, (i) => '$i in');
-    return DualScrollPicker(
-      leftItems: feetItems,
-      rightItems: inchItems,
-      initialLeftIndex: _selectedFeet - 4,
-      initialRightIndex: _selectedInches,
-      leftLabel: 'Feet',
-      rightLabel: 'Inches',
-      onLeftChanged: (i) => setState(() => _selectedFeet = 4 + i),
-      onRightChanged: (i) => setState(() => _selectedInches = i),
-    );
-  }
-
-  Widget _buildMetricWeightPicker() {
-    final items = List.generate(111, (i) => '${40 + i} kg');
-    return ScrollPicker(
-      items: items,
-      initialIndex: _selectedWeightKg - 40,
-      onSelected: (i) => setState(() => _selectedWeightKg = 40 + i),
-    );
-  }
-
-  Widget _buildImperialWeightPicker() {
-    final items = List.generate(241, (i) => '${90 + i} lbs');
-    return ScrollPicker(
-      items: items,
-      initialIndex: _selectedWeightLbs - 90,
-      onSelected: (i) => setState(() => _selectedWeightLbs = 90 + i),
+      ),
     );
   }
 
