@@ -307,15 +307,16 @@ class NotificationService {
         InitializationSettings(android: androidSettings, iOS: iosSettings),
       );
     } catch (e) {
-      // Fallback if ic_notification drawable is missing (e.g., in debug APK)
-      print('⚠️ Notification icon initialization failed: $e, using app icon as fallback');
+      // Fallback to app icon if ic_notification drawable is missing
+      print('⚠️ Using app icon as notification icon');
+      final androidSettings = AndroidInitializationSettings('ic_launcher');
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
       );
       await _plugin.initialize(
-        InitializationSettings(iOS: iosSettings),
+        InitializationSettings(android: androidSettings, iOS: iosSettings),
       );
     }
 
@@ -783,7 +784,7 @@ class NotificationService {
           'workout', 'Workout Reminders',
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@drawable/ic_notification',
+          icon: 'ic_launcher',
           largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
         ),
         iOS: DarwinNotificationDetails(),
