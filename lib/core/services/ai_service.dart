@@ -10,9 +10,9 @@ class AiService {
   factory AiService() => _instance;
   AiService._();
 
-  // OpenCode Zen API Configuration (Nemotron 3 Ultra - fast, no overthinking)
+  // OpenCode Zen API Configuration (Nemotron 3 Ultra Free - fast, direct, no overthinking)
   static const _baseUrl = 'https://opencode.ai/zen/v1/chat/completions';
-  static const _model = 'nemotron-3-ultra';
+  static const _model = 'nemotron-3-ultra-free';
 
   // Build-time fallback API key (for development/testing)
   static const _buildTimeApiKey = String.fromEnvironment('OPENCODE_ZEN_API_KEY');
