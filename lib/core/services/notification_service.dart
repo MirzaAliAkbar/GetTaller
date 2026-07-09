@@ -294,7 +294,7 @@ class NotificationService {
     ];
 
     final androidSettings = AndroidInitializationSettings(
-      '@drawable/ic_notification',
+      'ic_launcher',
     );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
