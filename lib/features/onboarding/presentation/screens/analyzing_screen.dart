@@ -41,7 +41,9 @@ class _AnalyzingScreenState extends ConsumerState<AnalyzingScreen>
     
     // Pre-load interstitial ad for the high-value action
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(adServiceProvider).loadInterstitialAd();
+      ref.read(adServiceProvider).loadInterstitialAd(
+        adUnitId: AppConstants.interstitialAnalysisAdUnitId,
+      );
     });
 
     _navigateAfter();

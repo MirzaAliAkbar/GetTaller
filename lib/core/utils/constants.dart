@@ -41,19 +41,23 @@ class AppConstants {
   static const double minTouchTarget = 44;
 
   // ── Ad Placements (Blueprint §3.3) ──
-  // Using Google test IDs until AdMob account is approved
-  // Once approved, switch to production IDs below:
-  //   Banner:   ca-app-pub-1626231124946252/8650924867
-  //   Inter:    ca-app-pub-1626231124946252/6094832720
-  //   Rewarded: ca-app-pub-1626231124946252/7345546664
-  //   Native:   ca-app-pub-1626231124946252/3963493400
-  //   App ID:   ca-app-pub-1626231124946252~5312234093
-  static const String bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
+  // Production AdMob IDs for GetTaller app
+  // App ID: ca-app-pub-7643307621517317~4891446164
+
+  // Banner Ads
+  static const String bannerAdUnitId = 'ca-app-pub-7643307621517317/6942894431'; // Daily Plan
+  static const String bannerResultPreviewAdUnitId = 'ca-app-pub-7643307621517317/1529986898'; // Result Preview
+
+  // Interstitial Ads
   static const String interstitialAdUnitId =
-      'ca-app-pub-3940256099942544/1033173712';
+      'ca-app-pub-7643307621517317/7896084698'; // Your Plan (onboarding completion)
+  static const String interstitialAnalysisAdUnitId =
+      'ca-app-pub-7643307621517317/2643758014'; // Analysis Screen
+
+  // Rewarded & Native
   static const String rewardedAdUnitId =
-      'ca-app-pub-3940256099942544/5224354917';
-  static const String nativeAdUnitId = 'ca-app-pub-3940256099942544/2247696110';
+      'ca-app-pub-7643307621517317/1863781970';
+  static const String nativeAdUnitId = 'ca-app-pub-7643307621517317/7265529308';
 
   static const int rewardedVideoGrantCount = 3;
   static const int initialFreeAiQueries = 3;

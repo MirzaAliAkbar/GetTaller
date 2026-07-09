@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'user_data_service.dart';
+import 'remote_config_service.dart';
 import '../utils/height_calculator.dart';
 
 class AiService {
@@ -8,7 +9,11 @@ class AiService {
   factory AiService() => _instance;
   AiService._();
 
-  static const _apiKey = String.fromEnvironment('DEEPSEEK_API_KEY');
+  // Build-time fallback (for development/testing)
+  static const _buildTimeApiKey = String.fromEnvironment('DEEPSEEK_API_KEY');
+
+  // Runtime-injected from Remote Config (for production)
+  late String _runtimeApiKey;
   static const _baseUrl = 'https://opencode.ai/zen/v1/chat/completions';
   static const _model = 'deepseek-v4-flash';
 
@@ -21,6 +26,25 @@ class AiService {
       'If the user is a teenager (13-19), emphasize urgency and consistency for their "Peak Potential". '
       'If the user is an adult (25+), focus on posture restoration and spinal health. '
       'If asked about medical conditions, advise consulting a doctor.';
+
+  /// Initialize AI service with Remote Config API key (production)
+  Future<void> initialize() async {
+    try {
+      final remoteConfig = RemoteConfigService();
+      _runtimeApiKey = remoteConfig.getDeepSeekApiKey();
+      if (_runtimeApiKey.isEmpty) {
+        _runtimeApiKey = _buildTimeApiKey; // Fallback to build-time key
+      }
+    } catch (e) {
+      print('Failed to load Remote Config API key: $e');
+      _runtimeApiKey = _buildTimeApiKey; // Fallback to build-time key
+    }
+  }
+
+  /// Get the appropriate API key (Remote Config or build-time fallback)
+  String _getApiKey() {
+    return _runtimeApiKey.isNotEmpty ? _runtimeApiKey : _buildTimeApiKey;
+  }
 
   /// Build a context string from the user's data for personalized AI responses.
   Future<String> buildUserContext(UserDataService service) async {
@@ -122,7 +146,7 @@ class AiService {
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer ${_getApiKey()}',
         },
         body: jsonEncode({
           'model': _model,

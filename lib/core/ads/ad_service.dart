@@ -50,14 +50,14 @@ class AdService {
   // INTERSTITIAL ADS — Blueprint §3.3: triggers after onboarding
   // ══════════════════════════════════════════════════════════════
 
-  Future<void> loadInterstitialAd() async {
+  Future<void> loadInterstitialAd({String? adUnitId}) async {
     if (_interstitialAd != null || _isInterstitialLoading) return;
     if (_interstitialRetries >= _maxRetries) return;
 
     _isInterstitialLoading = true;
 
     await InterstitialAd.load(
-      adUnitId: AppConstants.interstitialAdUnitId,
+      adUnitId: adUnitId ?? AppConstants.interstitialAdUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {

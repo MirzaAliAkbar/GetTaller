@@ -5,7 +5,9 @@ import '../../core/utils/constants.dart';
 /// Anchored Banner Ad widget — Blueprint §4.3
 /// Thread-safe wrapper with lifecycle management.
 class BannerAdWidget extends StatefulWidget {
-  const BannerAdWidget({super.key});
+  final String? adUnitId;
+
+  const BannerAdWidget({super.key, this.adUnitId});
 
   @override
   State<BannerAdWidget> createState() => _BannerAdWidgetState();
@@ -23,7 +25,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   void _loadAd() {
     _bannerAd = BannerAd(
-      adUnitId: AppConstants.bannerAdUnitId,
+      adUnitId: widget.adUnitId ?? AppConstants.bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(

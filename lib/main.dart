@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/hive_service.dart';
 import 'core/services/user_data_service.dart';
+import 'core/services/ai_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,13 @@ void main() async {
   await HiveService.init();
   // Migrate any legacy SharedPreferences data into Hive before first use.
   await UserDataService().migrateLegacyDataIfNeeded();
+
+  // Initialize AI Service with API key (from Remote Config or build-time)
+  try {
+    await AiService().initialize();
+  } catch (e) {
+    debugPrint('AI Service init failed: $e');
+  }
 
   final notifService = NotificationService();
   await notifService.init();

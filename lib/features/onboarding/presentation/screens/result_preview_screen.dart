@@ -177,7 +177,9 @@ class ResultPreviewScreen extends ConsumerWidget {
               const SizedBox(height: 12),
 
               // Banner ad
-              const BannerAdWidget(),
+              const BannerAdWidget(
+                adUnitId: AppConstants.bannerResultPreviewAdUnitId,
+              ),
             ],
           ),
         ),
