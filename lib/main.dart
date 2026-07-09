@@ -11,80 +11,48 @@ import 'core/services/user_data_service.dart';
 import 'core/services/ai_service.dart';
 
 void main() async {
-  debugPrint('🚀 GetTaller - Starting app initialization');
   WidgetsFlutterBinding.ensureInitialized();
-  debugPrint('✅ Widgets binding initialized');
 
-  // Initialize Firebase and Crashlytics
+  // CRITICAL: Only await Firebase + Hive (fast, needed immediately)
   try {
-    debugPrint('🔥 Initializing Firebase...');
     await Firebase.initializeApp();
-    debugPrint('✅ Firebase initialized');
-
-    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
-
-    // Pass all uncaught errors from the framework to Crashlytics.
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   } catch (e) {
-    debugPrint('❌ Firebase init failed: $e. Crashlytics will not be available.');
+    debugPrint('Firebase init failed: $e');
   }
 
-  try {
-    debugPrint('💾 Initializing Hive storage...');
-    await HiveService.init();
-    debugPrint('✅ Hive initialized');
-  } catch (e) {
-    debugPrint('❌ Hive init failed: $e');
-    rethrow;
-  }
+  await HiveService.init();
 
+  // SHOW THE APP IMMEDIATELY — no waiting for non-critical services
+  final notifService = NotificationService();
+  runApp(
+    ProviderScope(
+      overrides: [
+        notificationServiceProvider.overrideWithValue(notifService),
+      ],
+      child: const GetTallerApp(),
+    ),
+  );
+
+  // Fire-and-forget: init everything else in background AFTER app renders
+  _initBackgroundServices(notifService);
+}
+
+Future<void> _initBackgroundServices(NotificationService notifService) async {
   try {
-    debugPrint('📊 Migrating user data...');
-    // Migrate any legacy SharedPreferences data into Hive before first use.
     await UserDataService().migrateLegacyDataIfNeeded();
-    debugPrint('✅ User data migrated');
-  } catch (e) {
-    debugPrint('❌ User data migration failed: $e');
-  }
-
-  // Initialize AI Service with API key (from Remote Config or build-time)
+  } catch (_) {}
   try {
-    debugPrint('🤖 Initializing AI Service...');
     await AiService().initialize();
-    debugPrint('✅ AI Service initialized');
-  } catch (e) {
-    debugPrint('❌ AI Service init failed: $e');
-  }
-
+  } catch (_) {}
   try {
-    debugPrint('🔔 Initializing notifications...');
-    final notifService = NotificationService();
     await notifService.init();
-    debugPrint('✅ Notifications initialized');
-
-    try {
-      debugPrint('📱 Initializing AdMob...');
-      await MobileAds.instance.initialize();
-      debugPrint('✅ AdMob initialized');
-    } catch (e) {
-      debugPrint('❌ AdMob init failed: $e');
-    }
-
-    debugPrint('🎨 Starting app...');
-    runApp(
-      ProviderScope(
-        overrides: [
-          notificationServiceProvider.overrideWithValue(notifService),
-        ],
-        child: const GetTallerApp(),
-      ),
-    );
-  } catch (e) {
-    debugPrint('❌ Fatal error during initialization: $e');
-    rethrow;
-  }
+  } catch (_) {}
+  try {
+    await MobileAds.instance.initialize();
+  } catch (_) {}
 }
