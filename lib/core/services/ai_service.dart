@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'user_data_service.dart';
 import 'remote_config_service.dart';
@@ -153,13 +154,13 @@ class AiService {
           'Authorization': 'Bearer ${_getApiKey()}',
         },
         body: jsonEncode({
-          'model': _model, // deepseek-v4-flash-free (fast, no thinking by default)
+          'model': _model, // deepseek-v4-flash-free
           'messages': [
             {'role': 'system', 'content': systemMsg},
             {'role': 'user', 'content': question},
           ],
-          'max_tokens': 512, // Reduced for concise answers
-          'temperature': 0.5, // Lower for focused, direct responses
+          'max_tokens': 2048, // Increased to prevent truncation during thinking
+          'temperature': 0.3, // Very low for direct, consistent answers
         }),
       );
 
@@ -177,6 +178,39 @@ class AiService {
 
           final message = data['choices'][0]['message'];
           var answer = (message['content'] ?? '').toString().trim();
+
+          // If content is empty but reasoning_content exists, extract answer from thinking
+          if (answer.isEmpty && message['reasoning_content'] != null) {
+            print('⚠️ Extracting from reasoning_content');
+            String reasoning = (message['reasoning_content'] ?? '').toString().trim();
+
+            // Try to extract the actual answer (usually after the "thinking" part)
+            // Look for lines that look like answers (contains user-relevant info)
+            List<String> lines = reasoning.split('\n');
+            List<String> answerLines = [];
+
+            for (var line in lines) {
+              line = line.trim();
+              // Skip thinking headers and pure analysis
+              if (line.isNotEmpty &&
+                  !line.startsWith('Thinking.') &&
+                  !line.startsWith('1.') &&
+                  !line.startsWith('2.') &&
+                  !line.startsWith('3.') &&
+                  !line.contains('**Analyze') &&
+                  !line.contains('Wait,') &&
+                  !line.contains('Since no')) {
+                answerLines.add(line);
+              }
+            }
+
+            answer = answerLines.join('\n').trim();
+
+            // If we still got nothing, use raw reasoning but limit it
+            if (answer.isEmpty) {
+              answer = reasoning.substring(0, min(reasoning.length, 300));
+            }
+          }
 
           if (answer.isEmpty) {
             print('❌ Empty answer from API');
