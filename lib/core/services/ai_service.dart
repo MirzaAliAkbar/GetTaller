@@ -144,6 +144,8 @@ class AiService {
           ? '$_systemPrompt\n\nHere is the user\'s current data:\n$userContext'
           : _systemPrompt;
 
+      // OpenCode Zen API call (DeepSeek V4 Flash - NO THINKING MODE)
+      // Optimized for fast, direct responses
       final response = await http.post(
         Uri.parse(_baseUrl),
         headers: {
@@ -151,29 +153,23 @@ class AiService {
           'Authorization': 'Bearer ${_getApiKey()}',
         },
         body: jsonEncode({
-          'model': _model,
+          'model': _model, // deepseek-v4-flash-free (no thinking)
           'messages': [
             {'role': 'system', 'content': systemMsg},
             {'role': 'user', 'content': question},
           ],
-          'max_tokens': 1024,
-          'temperature': 0.7,
+          'max_tokens': 512, // Reduced for concise answers
+          'temperature': 0.5, // Lower for focused, direct responses
+          'thinking': false, // Explicitly disable thinking mode
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final message = data['choices'][0]['message'];
-        
-        // Return only the main content, stripping any embedded reasoning 
-        // that might be present in the content field itself for some models.
+
+        // Get direct answer (no thinking/reasoning content)
         var answer = (message['content'] ?? '').toString().trim();
-        
-        // If content is empty but reasoning exists, it means the model 
-        // only output reasoning (unlikely for final answer but possible)
-        if (answer.isEmpty && message['reasoning_content'] != null) {
-          answer = message['reasoning_content'].toString().trim();
-        }
 
         return answer.isNotEmpty
             ? answer
