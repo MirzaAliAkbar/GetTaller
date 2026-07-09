@@ -153,14 +153,13 @@ class AiService {
           'Authorization': 'Bearer ${_getApiKey()}',
         },
         body: jsonEncode({
-          'model': _model, // deepseek-v4-flash-free (no thinking)
+          'model': _model, // deepseek-v4-flash-free (fast, no thinking by default)
           'messages': [
             {'role': 'system', 'content': systemMsg},
             {'role': 'user', 'content': question},
           ],
           'max_tokens': 512, // Reduced for concise answers
           'temperature': 0.5, // Lower for focused, direct responses
-          'thinking': false, // Explicitly disable thinking mode
         }),
       );
 
