@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
@@ -19,12 +20,6 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
   bool _isMetric = true;
 
   @override
-  void initState() {
-    super.initState();
-    _isMetric = UnitConverter.isMetric;
-  }
-
-  @override
   void dispose() {
     _heightController.dispose();
     _weightController.dispose();
@@ -39,6 +34,7 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
     final heightCm = _isMetric ? height : height * 2.54;
     final weightKg = _isMetric ? weight : weight * 0.453592;
 
+    // Save unit preference so dashboard uses correct units
     UnitConverter.setMetric(_isMetric);
 
     ref.read(onboardingProvider.notifier).setMeasurements(
@@ -50,8 +46,6 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
 
   @override
   Widget build(BuildContext context) {
-    final heightUnit = UnitConverter.heightUnit();
-    final weightUnit = UnitConverter.weightUnit();
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -62,79 +56,89 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.spacingXl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProgressBar(3, 13),
-              const SizedBox(height: AppConstants.spacingXxl),
-              Text("Your current measurements",
-                  style: Theme.of(context).textTheme.headlineLarge),
-              const SizedBox(height: AppConstants.spacingSm),
-              Text("We need your height and weight to calculate your BMI and growth potential.",
-                  style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: AppConstants.spacingXxl),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProgressBar(3, 13),
+                const SizedBox(height: AppConstants.spacingXxl),
+                Text("Your current measurements",
+                    style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: AppConstants.spacingSm),
+                Text("We need your height and weight to calculate your BMI and growth potential.",
+                    style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: AppConstants.spacingXxl),
 
-              // Unit toggle
-              Row(
-                children: [
-                  _unitButton('Metric', true),
-                  const SizedBox(width: 8),
-                  _unitButton('Imperial', false),
-                ],
-              ),
-              const SizedBox(height: AppConstants.spacingXxl),
+                // Unit toggle
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(() => _isMetric = true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _isMetric ? AppTheme.accent : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _isMetric ? AppTheme.accent : AppTheme.textTertiary),
+                        ),
+                        child: Text('Metric', style: TextStyle(
+                          color: _isMetric ? Colors.white : AppTheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        )),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _isMetric = false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: !_isMetric ? AppTheme.accent : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: !_isMetric ? AppTheme.accent : AppTheme.textTertiary),
+                        ),
+                        child: Text('Imperial', style: TextStyle(
+                          color: !_isMetric ? Colors.white : AppTheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        )),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppConstants.spacingXxl),
 
-              TextField(
-                controller: _heightController,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Height ($heightUnit)',
-                  prefixIcon: const Icon(Icons.height_rounded),
+                TextField(
+                  controller: _heightController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: _isMetric ? 'Height (cm)' : 'Height (inches)',
+                    prefixIcon: const Icon(Icons.height_rounded),
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppConstants.spacingLg),
-              TextField(
-                controller: _weightController,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Weight ($weightUnit)',
-                  prefixIcon: const Icon(Icons.monitor_weight_rounded),
+                const SizedBox(height: AppConstants.spacingLg),
+                TextField(
+                  controller: _weightController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: _isMetric ? 'Weight (kg)' : 'Weight (lbs)',
+                    prefixIcon: const Icon(Icons.monitor_weight_rounded),
+                  ),
                 ),
-              ),
 
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Continue'),
+                const SizedBox(height: AppConstants.spacingXxl),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    child: const Text('Continue'),
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom + AppConstants.spacingLg),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _unitButton(String label, bool metric) {
-    final selected = _isMetric == metric;
-    return GestureDetector(
-      onTap: () => setState(() => _isMetric = metric),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.textTertiary,
-          ),
-        ),
-        child: Text(label, style: TextStyle(
-          color: selected ? Colors.white : AppTheme.textSecondary,
-          fontWeight: FontWeight.w600,
-        )),
       ),
     );
   }

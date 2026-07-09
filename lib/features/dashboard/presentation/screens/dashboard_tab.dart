@@ -362,7 +362,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                   icon: Icons.fitness_center_rounded,
                   label: 'Exercises',
                   color: AppTheme.accent,
-                  onTap: () => context.go('/main', extra: 1),
+                  onTap: () => context.push('/main', extra: 1),
                 ),
               ),
             ],
