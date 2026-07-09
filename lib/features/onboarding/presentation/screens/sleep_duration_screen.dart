@@ -74,7 +74,7 @@ class _SleepDurationScreenState extends ConsumerState<SleepDurationScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   ref.read(onboardingProvider.notifier).setSleepHours(_hours);
-                  context.go('/onboarding/analysis-depth');
+                  context.push('/onboarding/analysis-depth');
                 },
                 child: const Text('Continue'),
               ),

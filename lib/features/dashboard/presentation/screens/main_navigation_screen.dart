@@ -9,14 +9,15 @@ import '../../../../features/ai_coach/presentation/screens/ai_coach_tab.dart';
 
 /// Main app shell with 3-tab bottom navigation — Blueprint §4.1
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final int initialTab;
+  const MainNavigationScreen({super.key, this.initialTab = 0});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex = widget.initialTab;
 
   final _screens = const [
     DashboardTab(),

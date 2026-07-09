@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/unit_converter.dart';
 
 class CurrentMeasurementsScreen extends ConsumerStatefulWidget {
   const CurrentMeasurementsScreen({super.key});
@@ -33,11 +34,14 @@ class _CurrentMeasurementsScreenState extends ConsumerState<CurrentMeasurementsS
     final heightCm = _isMetric ? height : height * 2.54;
     final weightKg = _isMetric ? weight : weight * 0.453592;
 
+    // Save unit preference so dashboard uses correct units
+    UnitConverter.setMetric(_isMetric);
+
     ref.read(onboardingProvider.notifier).setMeasurements(
       heightCm: heightCm,
       weightKg: weightKg,
     );
-    context.go('/onboarding/parent-height');
+    context.push('/onboarding/parent-height');
   }
 
   @override

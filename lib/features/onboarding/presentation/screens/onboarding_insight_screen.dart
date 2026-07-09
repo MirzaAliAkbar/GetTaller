@@ -83,7 +83,7 @@ class OnboardingInsightScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/onboarding/result-preview'),
+                  onPressed: () => context.push('/onboarding/result-preview'),
                   child: const Text('See My Results'),
                 ),
               ),

@@ -50,7 +50,7 @@ class GenderSelectionScreen extends ConsumerWidget {
                       color: const Color(0xFF42A5F5),
                       onTap: () {
                         ref.read(onboardingProvider.notifier).setGender('male');
-                        context.go('/onboarding/birth-date');
+                        context.push('/onboarding/birth-date');
                       },
                     ),
                     const SizedBox(height: AppConstants.spacingLg),
@@ -61,7 +61,7 @@ class GenderSelectionScreen extends ConsumerWidget {
                       color: const Color(0xFFEC407A),
                       onTap: () {
                         ref.read(onboardingProvider.notifier).setGender('female');
-                        context.go('/onboarding/birth-date');
+                        context.push('/onboarding/birth-date');
                       },
                     ),
                   ],

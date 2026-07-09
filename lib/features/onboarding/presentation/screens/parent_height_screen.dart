@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/unit_converter.dart';
 
 class ParentHeightScreen extends ConsumerStatefulWidget {
   const ParentHeightScreen({super.key});
@@ -15,6 +16,13 @@ class ParentHeightScreen extends ConsumerStatefulWidget {
 class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
   final _fatherController = TextEditingController();
   final _motherController = TextEditingController();
+  late bool _isMetric;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMetric = UnitConverter.isMetric;
+  }
 
   @override
   void dispose() {
@@ -27,12 +35,17 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
     final father = double.tryParse(_fatherController.text);
     final mother = double.tryParse(_motherController.text);
     if (father == null || mother == null) return;
-    ref.read(onboardingProvider.notifier).setParentHeights(fatherHeightCm: father, motherHeightCm: mother);
-    context.go('/onboarding/sports');
+
+    final fatherCm = _isMetric ? father : father * 2.54;
+    final motherCm = _isMetric ? mother : mother * 2.54;
+
+    ref.read(onboardingProvider.notifier).setParentHeights(fatherHeightCm: fatherCm, motherHeightCm: motherCm);
+    context.push('/onboarding/sports');
   }
 
   @override
   Widget build(BuildContext context) {
+    final unit = UnitConverter.heightUnit();
     return Scaffold(
       appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded), onPressed: () => context.pop())),
       body: SafeArea(
@@ -47,13 +60,22 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
               const SizedBox(height: AppConstants.spacingSm),
               Text("This is the most important factor for predicting your height potential.",
                   style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: AppConstants.spacingXxl),
-              TextField(controller: _fatherController, keyboardType: TextInputType.number, decoration: const InputDecoration(
-                labelText: "Father's height (cm)", prefixIcon: Icon(Icons.man_rounded),
+              const SizedBox(height: AppConstants.spacingLg),
+              // Unit toggle
+              Row(
+                children: [
+                  _unitButton('Metric (cm)', true),
+                  const SizedBox(width: 8),
+                  _unitButton('Imperial (in)', false),
+                ],
+              ),
+              const SizedBox(height: AppConstants.spacingLg),
+              TextField(controller: _fatherController, keyboardType: TextInputType.number, decoration: InputDecoration(
+                labelText: "Father's height ($unit)", prefixIcon: const Icon(Icons.man_rounded),
               )),
               const SizedBox(height: AppConstants.spacingLg),
-              TextField(controller: _motherController, keyboardType: TextInputType.number, decoration: const InputDecoration(
-                labelText: "Mother's height (cm)", prefixIcon: Icon(Icons.woman_rounded),
+              TextField(controller: _motherController, keyboardType: TextInputType.number, decoration: InputDecoration(
+                labelText: "Mother's height ($unit)", prefixIcon: const Icon(Icons.woman_rounded),
               )),
               const Spacer(),
               SizedBox(width: double.infinity, height: 56,
@@ -62,6 +84,24 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _unitButton(String label, bool metric) {
+    final selected = _isMetric == metric;
+    return GestureDetector(
+      onTap: () => setState(() => _isMetric = metric),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.accent : AppTheme.accent.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(label, style: TextStyle(
+          color: selected ? Colors.white : AppTheme.accent,
+          fontWeight: FontWeight.w600, fontSize: 14,
+        )),
       ),
     );
   }

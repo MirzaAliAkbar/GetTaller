@@ -66,7 +66,7 @@ class _AnalyzingScreenState extends ConsumerState<AnalyzingScreen>
     await ref.read(adServiceProvider).showInterstitialAd();
 
     if (!mounted) return;
-    context.go('/onboarding/insight');
+    context.push('/onboarding/insight');
   }
 
   @override

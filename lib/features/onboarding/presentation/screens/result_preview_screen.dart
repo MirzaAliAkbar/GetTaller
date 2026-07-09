@@ -169,7 +169,7 @@ class ResultPreviewScreen extends ConsumerWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/onboarding/your-plan'),
+                  onPressed: () => context.push('/onboarding/your-plan'),
                   child: const Text('View My 90-Day Plan'),
                 ),
               ),

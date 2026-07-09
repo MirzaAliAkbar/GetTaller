@@ -92,7 +92,7 @@ class _ActivityCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         ref.read(onboardingProvider.notifier).setActivityLevel(value);
-        context.go('/onboarding/sleep');
+        context.push('/onboarding/sleep');
       },
       child: Container(
         padding: const EdgeInsets.all(24),

@@ -71,7 +71,7 @@ class PrivacyShieldScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/onboarding/gender'),
+                  onPressed: () => context.push('/onboarding/gender'),
                   child: const Text('I Understand & Agree'),
                 ),
               ),

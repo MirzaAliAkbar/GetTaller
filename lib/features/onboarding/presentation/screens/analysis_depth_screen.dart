@@ -46,7 +46,7 @@ class _DepthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () { ref.read(onboardingProvider.notifier).setAnalysisDepth(value); context.go('/onboarding/analyzing'); },
+      onTap: () { ref.read(onboardingProvider.notifier).setAnalysisDepth(value); context.push('/onboarding/analyzing'); },
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(

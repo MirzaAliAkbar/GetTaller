@@ -46,7 +46,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     if (proceed != true) return;
     
     if (!mounted) return;
-    context.go('/onboarding/privacy');
+    context.push('/onboarding/privacy');
   }
 
   Future<bool?> _showDisclaimer(BuildContext context) {

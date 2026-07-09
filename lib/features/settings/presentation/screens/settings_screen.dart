@@ -38,6 +38,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _saveUnitSystem(bool isMetric) async {
     await UnitConverter.setMetric(isMetric);
     setState(() => _isMetric = isMetric);
+    // Invalidate providers so dashboard rebuilds with new units
+    ref.invalidate(persistedUserDataProvider);
+    ref.invalidate(heightMeasurementsProvider);
   }
 
   @override

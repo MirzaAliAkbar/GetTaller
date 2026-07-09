@@ -109,7 +109,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/main',
         name: 'main',
-        builder: (context, state) => const MainNavigationScreen(),
+        builder: (context, state) {
+          final tab = state.extra is int ? state.extra as int : 0;
+          return MainNavigationScreen(initialTab: tab);
+        },
       ),
 
       // ── Feature Screens ──

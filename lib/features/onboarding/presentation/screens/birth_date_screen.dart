@@ -200,7 +200,7 @@ class _BirthDatePickerState extends ConsumerState<_BirthDatePicker> {
               ref.read(onboardingProvider.notifier).setBirthDate(
                     DateTime(selectedYear, selectedMonth, 1),
                   );
-              context.go('/onboarding/measurements');
+              context.push('/onboarding/measurements');
             },
             child: const Text('Continue'),
           ),
