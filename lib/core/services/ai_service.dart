@@ -30,17 +30,27 @@ class AiService {
       'If the user is an adult (25+), focus on posture restoration and spinal health. '
       'If asked about medical conditions, advise consulting a doctor.';
 
-  /// Initialize AI service with OpenCode Zen API key from Remote Config (production)
+  /// Initialize AI service with OpenCode Zen API key
+  /// Uses build-time key by default, tries Remote Config for runtime updates
   Future<void> initialize() async {
+    // Always start with build-time API key (most reliable)
+    _runtimeApiKey = _buildTimeApiKey;
+
+    // Optionally try to get updated key from Remote Config (non-blocking)
     try {
-      final remoteConfig = RemoteConfigService();
-      _runtimeApiKey = remoteConfig.getOpenCodeZenApiKey();
-      if (_runtimeApiKey.isEmpty) {
-        _runtimeApiKey = _buildTimeApiKey; // Fallback to build-time key
+      if (_buildTimeApiKey.isEmpty) {
+        // Only if build-time key not provided, try Remote Config
+        final remoteConfig = RemoteConfigService();
+        await remoteConfig.initialize();
+        final remoteKey = remoteConfig.getOpenCodeZenApiKey();
+        if (remoteKey.isNotEmpty) {
+          _runtimeApiKey = remoteKey;
+          print('✅ Loaded API key from Remote Config');
+        }
       }
     } catch (e) {
-      print('Failed to load OpenCode Zen API key from Remote Config: $e');
-      _runtimeApiKey = _buildTimeApiKey; // Fallback to build-time key
+      // Silent fail - already have build-time key
+      print('⚠️ Remote Config unavailable (using build-time key): $e');
     }
   }
 
