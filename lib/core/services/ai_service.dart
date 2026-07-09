@@ -164,17 +164,35 @@ class AiService {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final message = data['choices'][0]['message'];
+        try {
+          final data = jsonDecode(response.body);
 
-        // Get direct answer (no thinking/reasoning content)
-        var answer = (message['content'] ?? '').toString().trim();
+          // Debug logging
+          print('🤖 AI Coach Response: ${response.body}');
 
-        return answer.isNotEmpty
-            ? answer
-            : 'Sorry, I couldn\'t generate a response. Please try again.';
+          if (data['choices'] == null || (data['choices'] as List).isEmpty) {
+            print('❌ No choices in response');
+            return 'No response from AI. Please check your internet connection.';
+          }
+
+          final message = data['choices'][0]['message'];
+          var answer = (message['content'] ?? '').toString().trim();
+
+          if (answer.isEmpty) {
+            print('❌ Empty answer from API');
+            return 'AI returned empty response. Please try again.';
+          }
+
+          print('✅ AI Coach Answer: $answer');
+          return answer;
+        } catch (e) {
+          print('❌ JSON Parse Error: $e');
+          print('Response body: ${response.body}');
+          return 'Error parsing response: $e';
+        }
       } else {
-        return 'API error (${response.statusCode}). Please try again later.';
+        print('❌ API Error ${response.statusCode}: ${response.body}');
+        return 'API Error ${response.statusCode}: ${response.reasonPhrase}';
       }
     } catch (e) {
       return 'Network error. Please check your connection and try again.';
