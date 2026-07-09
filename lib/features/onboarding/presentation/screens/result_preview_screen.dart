@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/unit_converter.dart';
 import '../../../../core/utils/height_calculator.dart';
 import '../../../../shared/widgets/banner_ad_widget.dart';
 
@@ -65,7 +66,7 @@ class ResultPreviewScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '${data.currentHeightCm.toStringAsFixed(1)} cm',
+                      UnitConverter.formatHeight(data.currentHeightCm),
                       style: GoogleFonts.inter(
                         fontSize: 36,
                         fontWeight: FontWeight.w700,
@@ -92,7 +93,7 @@ class ResultPreviewScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '${predicted.peakHeight.toStringAsFixed(1)} cm',
+                      UnitConverter.formatHeight(predicted.peakHeight),
                       style: GoogleFonts.inter(
                         fontSize: 48,
                         fontWeight: FontWeight.w700,
@@ -126,8 +127,8 @@ class ResultPreviewScreen extends ConsumerWidget {
                       ),
                       child: Text(
                         potentialGain > 3
-                            ? '🔥 ${potentialGain.toStringAsFixed(1)} cm potential gain!'
-                            : '📈 ${potentialGain.toStringAsFixed(1)} cm potential gain',
+                            ? '🔥 ${UnitConverter.formatHeight(potentialGain)} potential gain!'
+                            : '📈 ${UnitConverter.formatHeight(potentialGain)} potential gain',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/utils/unit_converter.dart';
+import '../../../../shared/widgets/scroll_picker.dart';
 
 class ParentHeightScreen extends ConsumerStatefulWidget {
   const ParentHeightScreen({super.key});
@@ -14,9 +16,13 @@ class ParentHeightScreen extends ConsumerStatefulWidget {
 }
 
 class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
-  final _fatherController = TextEditingController();
-  final _motherController = TextEditingController();
   late bool _isMetric;
+  int _fatherHeightCm = 175;
+  int _fatherFeet = 5;
+  int _fatherInches = 9;
+  int _motherHeightCm = 163;
+  int _motherFeet = 5;
+  int _motherInches = 4;
 
   @override
   void initState() {
@@ -24,30 +30,30 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
     _isMetric = UnitConverter.isMetric;
   }
 
-  @override
-  void dispose() {
-    _fatherController.dispose();
-    _motherController.dispose();
-    super.dispose();
-  }
-
   void _submit() {
-    final father = double.tryParse(_fatherController.text);
-    final mother = double.tryParse(_motherController.text);
-    if (father == null || mother == null) return;
+    final fatherCm = _isMetric
+        ? _fatherHeightCm.toDouble()
+        : (_fatherFeet * 12 + _fatherInches) * 2.54;
+    final motherCm = _isMetric
+        ? _motherHeightCm.toDouble()
+        : (_motherFeet * 12 + _motherInches) * 2.54;
 
-    final fatherCm = _isMetric ? father : father * 2.54;
-    final motherCm = _isMetric ? mother : mother * 2.54;
-
-    ref.read(onboardingProvider.notifier).setParentHeights(fatherHeightCm: fatherCm, motherHeightCm: motherCm);
-    context.push('/onboarding/sports');
+    ref.read(onboardingProvider.notifier).setParentHeights(
+      fatherHeightCm: fatherCm,
+      motherHeightCm: motherCm,
+    );
+    context.go('/onboarding/sports');
   }
 
   @override
   Widget build(BuildContext context) {
-    final unit = UnitConverter.heightUnit();
     return Scaffold(
-      appBar: AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded), onPressed: () => context.pop())),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.spacingXl),
@@ -61,25 +67,54 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
               Text("This is the most important factor for predicting your height potential.",
                   style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: AppConstants.spacingLg),
+
               // Unit toggle
               Row(
                 children: [
                   _unitButton('Metric (cm)', true),
                   const SizedBox(width: 8),
-                  _unitButton('Imperial (in)', false),
+                  _unitButton('Imperial (ft/in)', false),
                 ],
               ),
               const SizedBox(height: AppConstants.spacingLg),
-              TextField(controller: _fatherController, keyboardType: TextInputType.number, decoration: InputDecoration(
-                labelText: "Father's height ($unit)", prefixIcon: const Icon(Icons.man_rounded),
-              )),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Father's height
+                      _sectionLabel("Father's Height"),
+                      const SizedBox(height: 8),
+                      _isMetric
+                          ? _buildMetricPicker(_fatherHeightCm, (i) => setState(() => _fatherHeightCm = 140 + i), 140)
+                          : _buildImperialPicker(_fatherFeet, _fatherInches,
+                              (f) => setState(() => _fatherFeet = 4 + f),
+                              (i) => setState(() => _fatherInches = i),
+                              _fatherFeet - 4, _fatherInches),
+                      const SizedBox(height: AppConstants.spacingLg),
+
+                      // Mother's height
+                      _sectionLabel("Mother's Height"),
+                      const SizedBox(height: 8),
+                      _isMetric
+                          ? _buildMetricPicker(_motherHeightCm, (i) => setState(() => _motherHeightCm = 140 + i), 140)
+                          : _buildImperialPicker(_motherFeet, _motherInches,
+                              (f) => setState(() => _motherFeet = 4 + f),
+                              (i) => setState(() => _motherInches = i),
+                              _motherFeet - 4, _motherInches),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: AppConstants.spacingLg),
-              TextField(controller: _motherController, keyboardType: TextInputType.number, decoration: InputDecoration(
-                labelText: "Mother's height ($unit)", prefixIcon: const Icon(Icons.woman_rounded),
-              )),
-              const Spacer(),
-              SizedBox(width: double.infinity, height: 56,
-                child: ElevatedButton(onPressed: _submit, child: const Text('Continue')),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  child: const Text('Continue'),
+                ),
               ),
             ],
           ),
@@ -106,12 +141,51 @@ class _ParentHeightScreenState extends ConsumerState<ParentHeightScreen> {
     );
   }
 
-  Widget _progressBar(int c, int t) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text('Step $c of $t', style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
-    const SizedBox(height: 8),
-    ClipRRect(borderRadius: BorderRadius.circular(4),
-      child: LinearProgressIndicator(value: c / t, backgroundColor: AppTheme.accent.withOpacity(0.1),
-          valueColor: const AlwaysStoppedAnimation(AppTheme.accent), minHeight: 6),
-    ),
-  ]);
+  Widget _sectionLabel(String label) {
+    return Text(label, style: GoogleFonts.inter(
+      fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary,
+    ));
+  }
+
+  Widget _buildMetricPicker(int currentValue, ValueChanged<int> onChanged, int startValue) {
+    final items = List.generate(81, (i) => '${startValue + i} cm');
+    return ScrollPicker(
+      items: items,
+      initialIndex: currentValue - startValue,
+      onSelected: onChanged,
+    );
+  }
+
+  Widget _buildImperialPicker(int feet, int inches, ValueChanged<int> onFeetChanged,
+      ValueChanged<int> onInchesChanged, int initialFeetIndex, int initialInchesIndex) {
+    final feetItems = List.generate(4, (i) => '${4 + i} ft');
+    final inchItems = List.generate(12, (i) => '$i in');
+    return DualScrollPicker(
+      leftItems: feetItems,
+      rightItems: inchItems,
+      initialLeftIndex: initialFeetIndex,
+      initialRightIndex: initialInchesIndex,
+      leftLabel: 'Feet',
+      rightLabel: 'Inches',
+      onLeftChanged: onFeetChanged,
+      onRightChanged: onInchesChanged,
+    );
+  }
+
+  Widget _progressBar(int c, int t) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Step $c of $t', style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
+      const SizedBox(height: 8),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          value: c / t,
+          backgroundColor: AppTheme.accent.withOpacity(0.1),
+          valueColor: const AlwaysStoppedAnimation(AppTheme.accent),
+          minHeight: 6,
+        ),
+      ),
+    ],
+  );
 }
