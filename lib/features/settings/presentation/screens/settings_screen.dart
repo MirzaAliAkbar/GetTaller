@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:in_app_review/in_app_review.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/unit_converter.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
 
@@ -34,8 +36,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveUnitSystem(bool isMetric) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.prefUnitSystem, isMetric);
+    await UnitConverter.setMetric(isMetric);
     setState(() => _isMetric = isMetric);
   }
 
@@ -195,8 +196,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   controller: heightController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Height (cm)',
-                    suffixText: 'cm',
+                    labelText: 'Height (${UnitConverter.heightUnit()})',
+                    suffixText: UnitConverter.heightUnit(),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -204,8 +205,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   controller: weightController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Weight (kg)',
-                    suffixText: 'kg',
+                    labelText: 'Weight (${UnitConverter.weightUnit()})',
+                    suffixText: UnitConverter.weightUnit(),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -258,8 +259,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         builder: (cCtx) => AlertDialog(
                           title: const Text('Update Measurements?'),
                           content: Text(
-                            'Set height to ${h.toStringAsFixed(1)} cm '
-                            'and weight to ${w.toStringAsFixed(1)} kg?',
+                            'Set height to ${UnitConverter.formatHeight(h)} '
+                            'and weight to ${UnitConverter.formatWeight(w)}?',
                           ),
                           actions: [
                             TextButton(
@@ -347,9 +348,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const Divider(height: 24),
                       _infoRow('Birth Year', '${userData.birthYear}'),
                       const Divider(height: 24),
-                      _infoRow('Current Height', '${userData.currentHeightCm.toStringAsFixed(1)} cm'),
+                      _infoRow('Current Height', UnitConverter.formatHeight(userData.currentHeightCm)),
                       const Divider(height: 24),
-                      _infoRow('Current Weight', '${userData.currentWeightKg.toStringAsFixed(1)} kg'),
+                      _infoRow('Current Weight', UnitConverter.formatWeight(userData.currentWeightKg)),
                       const Divider(height: 24),
                       _infoRow('Activity Level', '${userData.activityDaysPerWeek} days/week'),
                     ],
@@ -406,35 +407,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showRateApp(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('⭐ Rate GetTaller'),
-        content: const Text(
-          'If you find GetTaller helpful, please consider leaving a rating! '
-          'Your support helps others discover this app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Thanks for your support! 🌟'),
-                  backgroundColor: AppTheme.accent,
-                ),
-              );
-            },
-            child: const Text('Rate Now'),
-          ),
-        ],
-      ),
-    );
+  void _showRateApp(BuildContext context) async {
+    final inAppReview = InAppReview.instance;
+    if (await inAppReview.isAvailable()) {
+      inAppReview.requestReview();
+    } else {
+      inAppReview.openStoreListing(appStoreId: 'com.grayonix.GetTaller');
+    }
   }
 
   void _showAboutPrivacy(BuildContext context) {

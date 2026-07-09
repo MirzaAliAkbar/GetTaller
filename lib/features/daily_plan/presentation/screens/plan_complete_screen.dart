@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/utils/certificate_generator.dart';
 import '../../../../core/utils/height_calculator.dart';
+import '../../../../core/utils/unit_converter.dart';
 
 class PlanCompleteScreen extends ConsumerStatefulWidget {
   const PlanCompleteScreen({super.key});
@@ -150,9 +151,9 @@ class _PlanCompleteScreenState extends ConsumerState<PlanCompleteScreen>
                           children: [
                             _StatItem(label: 'Days', value: '90'),
                             _divider(),
-                            _StatItem(label: 'Started', value: '${currentHeight.toStringAsFixed(0)} cm'),
+                            _StatItem(label: 'Started', value: UnitConverter.formatHeight(currentHeight)),
                             _divider(),
-                            _StatItem(label: 'Potential', value: '${predicted.peakHeight.toStringAsFixed(0)} cm'),
+                            _StatItem(label: 'Potential', value: UnitConverter.formatHeight(predicted.peakHeight)),
                           ],
                         ),
                       ),

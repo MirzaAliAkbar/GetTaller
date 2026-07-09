@@ -9,11 +9,12 @@ import 'core/services/notification_service.dart';
 import 'core/services/hive_service.dart';
 import 'core/services/user_data_service.dart';
 import 'core/services/ai_service.dart';
+import 'core/utils/unit_converter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // CRITICAL: Only await Firebase + Hive (fast, needed immediately)
+  // CRITICAL: Only await Firebase + Hive + UnitConverter (fast, needed immediately)
   try {
     await Firebase.initializeApp();
     PlatformDispatcher.instance.onError = (error, stack) {
@@ -26,6 +27,7 @@ void main() async {
   }
 
   await HiveService.init();
+  await UnitConverter.init();
 
   // SHOW THE APP IMMEDIATELY — no waiting for non-critical services
   final notifService = NotificationService();

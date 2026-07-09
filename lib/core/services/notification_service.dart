@@ -295,13 +295,16 @@ class NotificationService {
 
     // Android notification init with fallback
     try {
-      final androidSettings = AndroidInitializationSettings('ic_launcher');
+      final androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
       await _plugin.initialize(
         InitializationSettings(android: androidSettings),
       );
     } catch (e) {
       try {
-        await _plugin.initialize(InitializationSettings());
+        final androidSettings2 = AndroidInitializationSettings('@drawable/ic_launcher');
+        await _plugin.initialize(
+          InitializationSettings(android: androidSettings2),
+        );
       } catch (e2) {
         print('⚠️ Notification init failed, continuing anyway');
       }
@@ -771,7 +774,7 @@ class NotificationService {
           'workout', 'Workout Reminders',
           importance: Importance.high,
           priority: Priority.high,
-          icon: 'ic_launcher',
+          icon: '@mipmap/ic_launcher',
           largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
         ),
         iOS: DarwinNotificationDetails(),
@@ -839,7 +842,7 @@ class NotificationService {
           orElse: () => Importance.defaultImportance,
         ),
         priority: priority,
-          icon: 'ic_launcher',
+          icon: '@mipmap/ic_launcher',
         largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
       ),
       iOS: const DarwinNotificationDetails(),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/utils/unit_converter.dart';
 import '../../../../core/utils/height_calculator.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
@@ -305,7 +306,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
               Expanded(
                 child: _StatTile(
                   label: 'Potential Gain',
-                  value: '+${potentialGain.toStringAsFixed(1)} cm',
+                  value: '+${UnitConverter.formatHeight(potentialGain)}',
                   icon: Icons.trending_up_rounded,
                   color: AppTheme.accent,
                 ),
@@ -479,9 +480,9 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
               TextField(
                 controller: heightController,
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Height (cm)',
-                  suffixText: 'cm',
+                decoration: InputDecoration(
+                  labelText: 'Height (${UnitConverter.heightUnit()})',
+                  suffixText: UnitConverter.heightUnit(),
                 ),
               ),
               const SizedBox(height: 24),
@@ -493,13 +494,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                     final value = double.tryParse(heightController.text);
                     if (value == null || value < 100 || value > 250) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Please enter a valid height (100-250 cm)')),
+                        SnackBar(content: Text('Please enter a valid height (100-250 ${UnitConverter.heightUnit()})')),
                       );
                       return;
                     }
+                    final cmValue = UnitConverter.inputToCm(value);
                     final service = ref.read(userDataServiceProvider);
-                    await service.addHeightMeasurement(value);
-                    await service.updateCurrentHeight(value);
+                    await service.addHeightMeasurement(cmValue);
+                    await service.updateCurrentHeight(cmValue);
 
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
@@ -593,7 +595,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${m.heightCm.toStringAsFixed(1)} cm',
+                                          '${UnitConverter.formatHeight(m.heightCm)}',
                                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                                         ),
                                         Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
@@ -702,7 +704,7 @@ class _DualMetricCards extends StatelessWidget {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      currentHeight.toStringAsFixed(1),
+                      UnitConverter.formatHeight(currentHeight).split(' ').first,
                       style: GoogleFonts.inter(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -711,7 +713,7 @@ class _DualMetricCards extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'cm',
+                      UnitConverter.heightUnit(),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -761,7 +763,7 @@ class _DualMetricCards extends StatelessWidget {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      peakHeight.toStringAsFixed(1),
+                      UnitConverter.formatHeight(peakHeight).split(' ').first,
                       style: GoogleFonts.inter(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -770,7 +772,7 @@ class _DualMetricCards extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'cm',
+                      UnitConverter.heightUnit(),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -853,7 +855,7 @@ class _HeightMeasureCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${currentHeightCm.toStringAsFixed(1)} cm',
+                      '${UnitConverter.formatHeight(currentHeightCm)}',
                       style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
                     ),
                     const SizedBox(height: 2),
@@ -957,7 +959,7 @@ class _HeightMeasureCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Measuring every 30 days gives reliable data. '
-                        'Your target: ${predictedHeight.toStringAsFixed(1)} cm',
+                        'Your target: ${UnitConverter.formatHeight(predictedHeight)}',
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppTheme.textTertiary,
