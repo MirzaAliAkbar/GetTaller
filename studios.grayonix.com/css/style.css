@@ -203,6 +203,12 @@ main {
   color: var(--color-primary-blue);
 }
 
+.nav-link.active {
+  color: var(--color-primary-blue);
+  border-bottom: 2px solid var(--color-primary-blue);
+  padding-bottom: 2px;
+}
+
 /* Hamburger Menu */
 .hamburger-menu {
   display: none;
