@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 64" width="256" height="64">
+  <!-- Define gradients -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5B21B6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Logo Mark - Abstract G with upward arrow -->
+  <g>
+    <!-- Letter G with curved design -->
+    <path d="M 12 32 C 12 20 20 12 32 12 C 44 12 52 20 52 32 C 52 44 44 52 32 52 C 24 52 16 47 14 40"
+          fill="none" stroke="url(#logoGradient)" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Upward arrow inside G -->
+    <path d="M 32 28 L 32 42" stroke="url(#logoGradient)" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="32,24 28,30 36,30" fill="url(#logoGradient)"/>
+  </g>
+
+  <!-- Text: Grayonix -->
+  <text x="68" y="42" font-family="Poppins, sans-serif" font-size="28" font-weight="700" fill="#1F2937">Grayonix</text>
+</svg>
