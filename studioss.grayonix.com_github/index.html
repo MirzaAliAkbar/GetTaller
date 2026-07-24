@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — GetTaller Affiliate</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <style>
+    .retention-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+    .retention-item { text-align: center; padding: 16px; background: var(--color-primary-light); border-radius: var(--radius-sm); }
+    .retention-item .day { font-size: 12px; color: var(--color-text-secondary); font-weight: 600; }
+    .retention-item .pct { font-size: 24px; font-weight: 700; color: var(--color-primary); }
+    .retention-item .desc { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+
+    .revenue-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 12px; }
+    .rev-format { text-align: center; padding: 12px; background: var(--color-bg); border-radius: var(--radius-sm); }
+    .rev-format .fmt { font-size: 12px; color: var(--color-text-secondary); text-transform: capitalize; }
+    .rev-format .amt { font-size: 18px; font-weight: 700; color: var(--color-text); }
+
+    .recent-signups { font-size: 13px; }
+    .recent-signups td { padding: 8px 12px; }
+    .label-estimated { font-size: 11px; color: var(--color-warning); font-weight: 600; }
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">GetTaller <span>Affiliate</span></div>
+    <div class="header-nav">
+      <a href="/dashboard/" class="active">Dashboard</a>
+      <a href="/dashboard/settings">Settings</a>
+      <button class="btn-logout" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div id="content">
+      <div class="loading"><div class="spinner"></div> Loading your dashboard...</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/dashboard/app.js"></script>
+  <script>
+    // ── Redirect if no session ──
+    if (!getToken()) { window.location.href = '/dashboard/login.html'; }
+
+    // ── Load dashboard ──
+    async function loadDashboard() {
+      const container = document.getElementById('content');
+      showLoading(container);
+
+      try {
+        const data = await api('/v1/influencer/stats');
+        renderDashboard(container, data);
+      } catch (e) {
+        clearToken();
+        window.location.href = '/dashboard/login.html';
+      }
+    }
+
+    function renderDashboard(container, data) {
+      const { stats, influencer, charts, retention, recentSignups } = data;
+      const chartsSection = charts || {};
+
+      container.innerHTML = `
+        <div style="margin-bottom:8px;">
+          <h1 style="font-size:24px;font-weight:700;">Welcome back, ${influencer.displayName}</h1>
+          <p style="color:var(--color-text-secondary);font-size:14px;">Code: <strong>${influencer.code}</strong> · ${stats.totalSignups} total referred users</p>
+        </div>
+
+        <div class="stats-row">
+          ${createStatCard('Total Signups', formatNumber(stats.totalSignups),
+            influencer.sharePercent === 20 ? '🎉 Tier: 20% revenue share' : 'Tier: 5% revenue share')}
+          ${createStatCard('Revenue Generated (est.)', formatCurrency(stats.totalRevenue),
+            'AdMob estimated revenue')}
+          ${createStatCard('Your Earnings (est.)', formatCurrency(stats.earningsEstimate),
+            `${influencer.sharePercent}% of revenue`)}
+          ${createStatCard('Revenue Per User', formatCurrency(stats.revenuePerUser),
+            'Avg. across all referred users')}
+        </div>
+
+        <p class="label-estimated" style="margin:-12px 0 20px 4px;">
+          ⚡ Revenue figures are estimated from real-time ad data and will be reconciled monthly for payouts.
+        </p>
+
+        <div class="dashboard-grid">
+          <div>
+            <div class="card">
+              <div class="card-header">Signups (Last 30 Days)</div>
+              <div class="chart-wrapper" id="signupsChart"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">Revenue Estimate (Last 30 Days)</div>
+              <div class="chart-wrapper" id="revenueChart"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-header">User Retention</div>
+              <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;">
+                Percentage of users still active after:
+              </p>
+              <div class="retention-grid">
+                <div class="retention-item"><div class="day">Day 1</div><div class="pct">${retention.d1}%</div></div>
+                <div class="retention-item"><div class="day">Day 7</div><div class="pct">${retention.d7}%</div></div>
+                <div class="retention-item"><div class="day">Day 30</div><div class="pct">${retention.d30}%</div></div>
+                <div class="retention-item"><div class="day">Day 90</div><div class="pct">${retention.d90}%</div></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">Revenue by Ad Format</div>
+              <div class="revenue-breakdown" id="revenueByFormat"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">Recent Signups</div>
+              ${recentSignups && recentSignups.length
+                ? `<div class="recent-signups"><table><tr><th>Date</th><th>Country</th><th>Platform</th></tr>
+                    ${recentSignups.slice(0, 10).map(s =>
+                      `<tr><td>${formatDate(s.created_at)}</td><td>${s.country || '—'}</td><td>${s.platform || '—'}</td></tr>`
+                    ).join('')}</table></div>`
+                : '<div class="empty-state" style="padding:30px;"><div class="icon">👤</div>No signups yet. Share your code!</div>'
+              }
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Render charts
+      if (chartsSection.signupsByDay?.length) {
+        renderBarChart(document.getElementById('signupsChart'), chartsSection.signupsByDay, 'day', 'count');
+      } else {
+        document.getElementById('signupsChart').innerHTML =
+          '<div class="empty-state" style="padding:20px;"><div class="icon">📈</div>No signups yet this month</div>';
+      }
+
+      if (chartsSection.revenue30d?.length) {
+        renderBarChart(document.getElementById('revenueChart'), chartsSection.revenue30d, 'day', 'revenue', 'var(--color-accent)');
+      } else {
+        document.getElementById('revenueChart').innerHTML =
+          '<div class="empty-state" style="padding:20px;"><div class="icon">💰</div>No revenue data yet</div>';
+      }
+
+      // Ad format breakdown
+      const fmtContainer = document.getElementById('revenueByFormat');
+      if (chartsSection.revenueByFormat?.length) {
+        fmtContainer.innerHTML = chartsSection.revenueByFormat.map(f =>
+          `<div class="rev-format">
+            <div class="fmt">${f.ad_format}</div>
+            <div class="amt">${formatCurrency((f.micros || 0) / 1000000)}</div>
+            <div style="font-size:11px;color:var(--color-text-secondary);">${formatNumber(f.count)} impressions</div>
+          </div>`
+        ).join('');
+      } else {
+        fmtContainer.innerHTML = '<div class="empty-state" style="padding:10px;grid-column:1/-1;">No ad data yet</div>';
+      }
+    }
+
+    function handleLogout() {
+      fetch('/v1/influencer/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } }).catch(()=>{});
+      clearToken();
+      window.location.href = '/dashboard/login.html';
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

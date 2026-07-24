@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — GetTaller Affiliate</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="stylesheet" href="/admin/styles.css">
+</head>
+<body>
+  <div class="header admin-header">
+    <div class="header-logo">GetTaller <span>Admin</span></div>
+    <div class="header-nav">
+      <a href="/admin/" class="active">Dashboard</a>
+      <a href="/admin/add-influencer.html">Add Influencer</a>
+      <a href="/admin/payouts.html">Payouts</a>
+      <button class="btn-logout" onclick="handleAdminLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div id="content">
+      <div class="loading"><div class="spinner"></div> Loading admin dashboard...</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/dashboard/app.js"></script>
+  <script src="/admin/app.js"></script>
+  <script>
+    if (!getToken()) { window.location.href = '/admin/login.html'; }
+
+    async function loadDashboard() {
+      const container = document.getElementById('content');
+      showLoading(container);
+
+      try {
+        const data = await adminApi('/dashboard');
+        renderDashboard(container, data);
+      } catch {
+        clearToken();
+        window.location.href = '/admin/login.html';
+      }
+    }
+
+    function renderDashboard(container, data) {
+      container.innerHTML = `
+        <div style="margin-bottom:20px;">
+          <h1 style="font-size:24px;font-weight:700;">Affiliate Dashboard</h1>
+          <p style="color:var(--color-text-secondary);font-size:14px;">Overview of all influencer activity</p>
+        </div>
+
+        <div id="statsBar"></div>
+
+        <div class="card">
+          <div class="card-header">All Influencers</div>
+          <div id="influencerTable"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Quick Actions</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="/admin/add-influencer.html" class="btn btn-primary">+ Add Influencer</a>
+            <a href="/admin/payouts.html" class="btn btn-secondary">View Payouts</a>
+          </div>
+        </div>
+      `;
+
+      renderAdminStats(document.getElementById('statsBar'), data);
+      renderInfluencerTable(document.getElementById('influencerTable'), data.influencers);
+    }
+
+    // Make filterTable global for inline onclick
+    window.filterTable = filterTable;
+
+    loadDashboard();
+  </script>
+</body>
+</html>

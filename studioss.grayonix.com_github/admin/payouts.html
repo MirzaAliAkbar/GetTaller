@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payouts — GetTaller Admin</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="stylesheet" href="/admin/styles.css">
+  <style>
+    .payout-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .payout-summary .stat-card { border-left-color: var(--color-admin-primary); }
+    .reconcile-form { background: var(--color-primary-light); padding: 20px; border-radius: var(--radius-sm); margin: 16px 0; }
+    .reconcile-form textarea { width: 100%; min-height: 100px; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); resize: vertical; }
+    @media (max-width: 768px) { .payout-summary { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="header admin-header">
+    <div class="header-logo">GetTaller <span>Admin</span></div>
+    <div class="header-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/add-influencer.html">Add Influencer</a>
+      <a href="/admin/payouts.html" class="active">Payouts</a>
+      <button class="btn-logout" onclick="handleAdminLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div id="content">
+      <div class="loading"><div class="spinner"></div> Loading payouts...</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/dashboard/app.js"></script>
+  <script src="/admin/app.js"></script>
+  <script>
+    if (!getToken()) window.location.href = '/admin/login.html';
+
+    async function loadPayouts() {
+      const container = document.getElementById('content');
+      showLoading(container);
+
+      try {
+        const data = await adminApi('/payouts');
+        renderPayouts(container, data);
+      } catch {
+        clearToken();
+        window.location.href = '/admin/login.html';
+      }
+    }
+
+    function renderPayouts(container, data) {
+      const { payouts, summary } = data;
+
+      container.innerHTML = `
+        <h1 style="font-size:24px;font-weight:700;margin-bottom:24px;">Payouts</h1>
+
+        <div class="payout-summary">
+          <div class="stat-card">
+            <div class="stat-label">Total Paid Out</div>
+            <div class="stat-value">${fmtCurrency(summary.totalPaid)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending Payouts</div>
+            <div class="stat-value">${fmtCurrency(summary.pendingTotal)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending Count</div>
+            <div class="stat-value">${summary.pendingCount}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;gap:12px;">
+            Reconciliation
+            <button class="btn btn-sm btn-primary" onclick="toggleReconcileForm()">+ Start Reconciliation</button>
+          </div>
+          <div id="reconcileForm" style="display:none;" class="reconcile-form">
+            <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px;">
+              Paste AdMob actual revenue data in JSON format:<br>
+              <code style="font-size:11px;">{"month": "2026-07", "revenues": {"SARAH20": 150000000, "FITNESS01": 85000000}}</code>
+            </p>
+            <textarea id="reconcileData" placeholder='{"month": "2026-07", "revenues": {"CODE1": 100000000, "CODE2": 50000000}}'></textarea>
+            <div style="margin-top:12px;">
+              <button class="btn btn-primary" onclick="runReconciliation()">Compute Payouts</button>
+              <button class="btn btn-secondary" onclick="toggleReconcileForm()">Cancel</button>
+            </div>
+            <div id="reconcileResult" style="margin-top:16px;display:none;"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Payout History</div>
+          ${payouts && payouts.length
+            ? `<div style="overflow-x:auto;"><table class="admin-table">
+                <tr><th>Month</th><th>Influencer</th><th>Signups</th><th>Revenue Reconciled</th><th>Share%</th><th>Payout</th><th>Status</th><th></th></tr>
+                ${payouts.map(p => `
+                  <tr class="${!p.paid && p.payout_micros > 0 ? 'payout-due' : ''}">
+                    <td>${p.month}</td>
+                    <td><strong>${p.displayName || p.influencer_id}</strong></td>
+                    <td>${fmtNumber(p.total_signups)}</td>
+                    <td>${fmtCurrency(p.ad_revenue_micros / 1000000)}</td>
+                    <td>${p.share_percent}%</td>
+                    <td style="font-weight:700;">${fmtCurrency(p.payout_micros / 1000000)}</td>
+                    <td><span class="badge ${p.paid ? 'badge-paid' : 'badge-pending'}">${p.paid ? 'Paid' : 'Pending'}</span></td>
+                    <td class="actions-cell">
+                      ${!p.paid && p.payout_micros > 0
+                        ? `<button class="btn btn-sm btn-primary" onclick="markPaid(${p.id})">Mark Paid</button>`
+                        : ''
+                      }
+                    </td>
+                  </tr>
+                `).join('')}
+              </table></div>`
+            : '<div class="empty-state" style="padding:30px;"><div class="icon">📋</div>No payout records yet. Run reconciliation to generate payouts.</div>'
+          }
+        </div>
+      `;
+    }
+
+    function toggleReconcileForm() {
+      const form = document.getElementById('reconcileForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function runReconciliation() {
+      const textarea = document.getElementById('reconcileData');
+      const resultDiv = document.getElementById('reconcileResult');
+      let payload;
+
+      try {
+        payload = JSON.parse(textarea.value);
+      } catch {
+        showToast('Invalid JSON format', 'error');
+        return;
+      }
+
+      if (!payload.month || !payload.revenues) {
+        showToast('Missing "month" or "revenues"', 'error');
+        return;
+      }
+
+      try {
+        const result = await adminApi('/payouts/reconcile', { method: 'POST', body: payload });
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+          <div style="background:#d1fae5;padding:14px;border-radius:var(--radius-sm);">
+            <strong>✅ Reconciliation complete</strong>
+            <p style="font-size:13px;margin-top:6px;">Month: ${result.month} · ${result.entries.length} payouts computed · Total: ${fmtCurrency(result.totalPayoutMicros / 1000000)}</p>
+          </div>
+          <div style="margin-top:8px;">
+            <button class="btn btn-sm btn-primary" onclick="location.reload()">Refresh page</button>
+          </div>
+        `;
+        showToast('Reconciliation done!');
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function markPaid(id) {
+      if (!confirm('Mark this payout as paid?')) return;
+      try {
+        await adminApi('/payouts/mark-paid', { method: 'POST', body: { id } });
+        showToast('Marked as paid');
+        location.reload();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    loadPayouts();
+  </script>
+</body>
+</html>

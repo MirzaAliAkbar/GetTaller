@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Influencer Detail — GetTaller Admin</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="stylesheet" href="/admin/styles.css">
+  <style>
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .detail-full { grid-column: 1 / -1; }
+    .fraud-list { margin-top: 12px; }
+    .fraud-list .fraud-item { padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 6px; font-size: 13px; }
+    .override-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+    .override-form input { width: 80px; }
+    .signup-list { max-height: 400px; overflow-y: auto; font-size: 13px; }
+    .signup-list td { padding: 6px 10px; }
+    @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="header admin-header">
+    <div class="header-logo">GetTaller <span>Admin</span></div>
+    <div class="header-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/add-influencer.html">Add Influencer</a>
+      <a href="/admin/payouts.html">Payouts</a>
+      <button class="btn-logout" onclick="handleAdminLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div id="content">
+      <div class="loading"><div class="spinner"></div> Loading influencer details...</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/dashboard/app.js"></script>
+  <script src="/admin/app.js"></script>
+  <script>
+    if (!getToken()) { window.location.href = '/admin/login.html'; }
+
+    const code = new URLSearchParams(location.search).get('id');
+    if (!code) { window.location.href = '/admin/'; }
+
+    async function loadInfluencer() {
+      const container = document.getElementById('content');
+      showLoading(container);
+
+      try {
+        const data = await adminApi(`/influencer/${code}`);
+        renderInfluencer(container, data);
+      } catch {
+        showToast('Failed to load influencer', 'error');
+      }
+    }
+
+    function renderInfluencer(container, data) {
+      const { influencer, stats, fraudFlags, signups, retention } = data;
+      const hasFraud = fraudFlags && fraudFlags.length > 0;
+
+      container.innerHTML = `
+        <div style="margin-bottom:20px;">
+          <a href="/admin/" style="color:var(--color-text-secondary);text-decoration:none;font-size:13px;">← Back to Dashboard</a>
+          <h1 style="font-size:24px;font-weight:700;margin-top:8px;">${influencer.displayName}</h1>
+          <p style="color:var(--color-text-secondary);font-size:14px;">
+            Code: <strong>${influencer.code}</strong> ·
+            <span class="badge ${influencer.active ? 'badge-active' : 'badge-inactive'}">${influencer.active ? 'Active' : 'Inactive'}</span>
+            · Member since ${fmtDate(influencer.created_at)}
+          </p>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">Total Signups</div><div class="stat-value">${fmtNumber(stats.totalSignups)}</div></div>
+          <div class="stat-card"><div class="stat-label">Revenue (est.)</div><div class="stat-value">${fmtCurrency(stats.estimatedRevenue)}</div></div>
+          <div class="stat-card"><div class="stat-label">Earnings (est.)</div><div class="stat-value">${fmtCurrency(stats.estimatedEarnings)}</div></div>
+          <div class="stat-card"><div class="stat-label">Revenue/User</div><div class="stat-value">${fmtCurrency(stats.revenuePerUser)}</div></div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="card">
+            <div class="card-header">Retention</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
+              <div><div style="font-size:12px;color:var(--color-text-secondary);">Day 1</div><div style="font-size:22px;font-weight:700;">${retention.d1}%</div></div>
+              <div><div style="font-size:12px;color:var(--color-text-secondary);">Day 7</div><div style="font-size:22px;font-weight:700;">${retention.d7}%</div></div>
+              <div><div style="font-size:12px;color:var(--color-text-secondary);">Day 30</div><div style="font-size:22px;font-weight:700;">${retention.d30}%</div></div>
+              <div><div style="font-size:12px;color:var(--color-text-secondary);">Day 90</div><div style="font-size:22px;font-weight:700;">${retention.d90}%</div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">Settings</div>
+            <div class="info-row"><span class="label">Revenue Share</span><span class="value">${influencer.share_percent}%</span></div>
+            <div class="info-row"><span class="label">Auto-flip eligible?</span><span class="value">${stats.totalSignups >= 5000 ? '✅ Yes (5K+ signups)' : '❌ No (${5000 - stats.totalSignups} to go)'}</span></div>
+            <div class="override-form">
+              <label style="font-size:12px;">Override share%:</label>
+              <input type="number" id="newShare" value="${influencer.share_percent}" min="0" max="100" style="width:70px;">
+              <button class="btn btn-sm btn-primary" onclick="updateShare()">Update</button>
+            </div>
+            <div style="margin-top:12px;border-top:1px solid var(--color-border);padding-top:12px;">
+              <button class="btn btn-sm ${influencer.active ? 'btn-danger' : 'btn-primary'}"
+                      onclick="toggleStatus()">
+                ${influencer.active ? 'Deactivate Code' : 'Activate Code'}
+              </button>
+            </div>
+          </div>
+
+          <div class="card detail-full">
+            <div class="card-header" style="display:flex;align-items:center;gap:8px;">
+              Fraud Alerts ${hasFraud ? `<span class="fraud-flag fraud-critical">${fraudFlags.length} flag(s)</span>` : '<span class="badge badge-active">None</span>'}
+            </div>
+            ${hasFraud
+              ? `<div class="fraud-list">${fraudFlags.map(f =>
+                  `<div class="fraud-item" style="background:${f.severity === 'critical' ? '#fee2e2' : '#fff7ed'};border:1px solid ${f.severity === 'critical' ? '#fecaca' : '#fed7aa'}">
+                     <strong>${f.type}</strong> — ${f.description} (${fmtDate(f.detected_at)})
+                   </div>`
+                ).join('')}</div>`
+              : '<div style="font-size:14px;color:var(--color-text-secondary);">No anomalies detected.</div>'
+            }
+          </div>
+
+          <div class="card detail-full">
+            <div class="card-header">Recent Signups</div>
+            ${signups && signups.length
+              ? `<div class="signup-list"><table>
+                  <tr><th>Date</th><th>Install ID</th><th>Country</th><th>Platform</th></tr>
+                  ${signups.map(s =>
+                    `<tr><td>${fmtDate(s.created_at)}</td><td style="font-size:11px;font-family:monospace;">${s.install_id}</td><td>${s.country || '—'}</td><td>${s.platform || '—'}</td></tr>`
+                  ).join('')}
+                </table></div>`
+              : '<div class="empty-state" style="padding:20px;"><div class="icon">👤</div>No signups yet</div>'
+            }
+          </div>
+        </div>
+      `;
+    }
+
+    async function updateShare() {
+      const pct = parseInt(document.getElementById('newShare').value);
+      if (isNaN(pct) || pct < 0 || pct > 100) { showToast('Enter 0–100', 'error'); return; }
+      try {
+        await adminApi(`/codes/${code}`, { method: 'PATCH', body: { share_percent: pct } });
+        showToast(`Share updated to ${pct}%`);
+        location.reload();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function toggleStatus() {
+      if (!confirm(`Toggle status for code "${code}"?`)) return;
+      try {
+        await adminApi(`/codes/${code}`, { method: 'PATCH', body: { active: 0 } });
+        showToast('Status toggled');
+        location.reload();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    loadInfluencer();
+  </script>
+</body>
+</html>

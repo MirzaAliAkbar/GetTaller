@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — GetTaller Affiliate</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <style>
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .label { color: var(--color-text-secondary); font-size: 14px; }
+    .info-row .value { font-weight: 600; font-size: 14px; }
+    .payout-history td { font-size: 13px; }
+    .payout-history .amount { font-weight: 700; }
+    @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">GetTaller <span>Affiliate</span></div>
+    <div class="header-nav">
+      <a href="/dashboard/">Dashboard</a>
+      <a href="/dashboard/settings" class="active">Settings</a>
+      <button class="btn-logout" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div id="content">
+      <div class="loading"><div class="spinner"></div> Loading...</div>
+    </div>
+  </div>
+
+  <script src="/dashboard/app.js"></script>
+  <script>
+    if (!getToken()) window.location.href = '/dashboard/login.html';
+
+    async function loadSettings() {
+      const container = document.getElementById('content');
+      showLoading(container);
+
+      try {
+        const data = await api('/v1/influencer/settings');
+        renderSettings(container, data);
+      } catch {
+        clearToken();
+        window.location.href = '/dashboard/login.html';
+      }
+    }
+
+    function renderSettings(container, data) {
+      const { profile, payouts } = data;
+
+      container.innerHTML = `
+        <h1 style="font-size:24px;font-weight:700;margin-bottom:24px;">Settings</h1>
+
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-header">Profile</div>
+            <div class="info-row"><span class="label">Display Name</span><span class="value">${profile.displayName}</span></div>
+            <div class="info-row"><span class="label">Referral Code</span><span class="value" style="color:var(--color-primary);letter-spacing:1px;">${profile.code}</span></div>
+            <div class="info-row"><span class="label">Revenue Share</span><span class="value">${profile.sharePercent}%</span></div>
+            <div class="info-row"><span class="label">Total Referred Users</span><span class="value">${formatNumber(profile.totalInstalls)}</span></div>
+            <div class="info-row"><span class="label">Member Since</span><span class="value">${formatDate(profile.memberSince)}</span></div>
+            <div class="info-row"><span class="label">Last Payout</span><span class="value">${profile.lastPayoutAt ? formatDate(profile.lastPayoutAt) : '—'}</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">How to Refer</div>
+            <div style="font-size:14px;line-height:1.7;">
+              <p style="margin-bottom:12px;">Tell your audience to enter your referral code when setting up GetTaller:</p>
+              <div style="background:var(--color-primary-light);padding:16px;border-radius:var(--radius-sm);text-align:center;margin-bottom:12px;">
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px;">Your referral code</div>
+                <div style="font-size:28px;font-weight:800;color:var(--color-primary);letter-spacing:3px;">${profile.code}</div>
+              </div>
+              <p style="color:var(--color-text-secondary);font-size:13px;">
+                Users enter this code during onboarding (one of the first steps). It's completely optional for them.
+              </p>
+              <p style="color:var(--color-text-secondary);font-size:13px;margin-top:8px;">
+                Deep linking (auto-fill codes via links) is coming in Phase 2 — no changes needed on your end.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+          <div class="card-header">Payout History</div>
+          ${payouts && payouts.length
+            ? `<div class="payout-history"><table>
+                <tr><th>Month</th><th>Signups</th><th>Revenue Reconciled</th><th>Your Payout</th><th>Status</th></tr>
+                ${payouts.map(p => `
+                  <tr>
+                    <td>${p.month}</td>
+                    <td>${formatNumber(p.total_signups)}</td>
+                    <td class="amount">${formatCurrency(p.ad_revenue_micros / 1000000)}</td>
+                    <td class="amount" style="color:var(--color-primary);">${formatCurrency(p.payout_micros / 1000000)}</td>
+                    <td><span class="badge ${p.paid ? 'badge-paid' : 'badge-pending'}">${p.paid ? 'Paid' : 'Pending'}</span></td>
+                  </tr>
+                `).join('')}
+              </table></div>`
+            : '<div class="empty-state" style="padding:20px;"><div class="icon">📋</div>No payouts yet. Keep sharing your code!</div>'
+          }
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+          <div class="card-header">Questions?</div>
+          <p style="font-size:14px;color:var(--color-text-secondary);">
+            Revenue figures shown here are <strong>estimates</strong> based on real-time ad data.
+            Actual earnings are reconciled at the end of each month and paid out within 30 days.
+            Payout is sent via PayPal, Wise, or Stripe Connect when your balance reaches $50.
+          </p>
+        </div>
+      `;
+    }
+
+    function handleLogout() {
+      fetch('/v1/influencer/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } }).catch(()=>{});
+      clearToken();
+      window.location.href = '/dashboard/login.html';
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>
