@@ -2,20 +2,27 @@
 
 const API_BASE = window.API_BASE || '';
 
-// ── Session management ──
+// ── Session management (cookie + localStorage backup) ──
 function getToken() {
+  // Try cookie first (set by login page or server Set-Cookie)
   const match = document.cookie.match(/session_token=([^;]+)/);
-  return match ? match[1] : null;
+  if (match && match[1]) return match[1];
+  // Fallback to localStorage (survives stricter browser settings)
+  try { return localStorage.getItem('session_token'); } catch { return null; }
 }
 
 function setToken(token) {
+  // Set cookie (path=/ so it's available on all pages)
   const d = new Date();
   d.setTime(d.getTime() + 7 * 24 * 60 * 60 * 1000);
   document.cookie = `session_token=${token};path=/;expires=${d.toUTCString()};SameSite=Lax`;
+  // Also store in localStorage as backup
+  try { localStorage.setItem('session_token', token); } catch {}
 }
 
 function clearToken() {
   document.cookie = 'session_token=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  try { localStorage.removeItem('session_token'); } catch {}
 }
 
 // ── API client ──
@@ -26,6 +33,7 @@ async function api(path, opts = {}) {
 
   const res = await fetch(`${API_BASE}${path}`, {
     headers,
+    credentials: 'include',
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     method: opts.method || (opts.body ? 'POST' : 'GET'),
   });

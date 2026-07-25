@@ -82,7 +82,7 @@
         }
 
         // Set the session cookie and redirect
-        document.cookie = `session_token=${data.token};path=/;max-age=${7*24*60*60};SameSite=Lax`;
+        setToken(data.token);
         window.location.href = '/dashboard/';
       } catch (e) {
         errorMsg.textContent = 'Connection error. Please try again.';
