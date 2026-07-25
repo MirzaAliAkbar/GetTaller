@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
+import '../services/attribution_service.dart';
 
 /// Ad lifecycle state tracked via Riverpod
 enum AdLoadState { initial, loading, loaded, failed }
@@ -23,6 +26,7 @@ class AdService {
 
   // ── Rewarded ──
   RewardedAd? _rewardedAd;
+  String? _rewardedAdUnitId; // unit ID the currently cached/loading ad belongs to
   bool _isRewardedLoading = false;
   Completer<bool>? _rewardedLoadCompleter;
 
@@ -41,9 +45,69 @@ class AdService {
   void Function()? onRewardedFailed;
   void Function(double cpm)? onNativeAdImpression;
 
+  // ── Affiliate attribution ──
+  String? _referralCode;
+
+  /// Load cached referral code from storage for ad attribution.
+  Future<void> initAttribution() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _referralCode = prefs.getString(AppConstants.prefReferralCode);
+    } catch (_) {}
+  }
+
   // ── Initialization ──
   Future<void> initialize() async {
     await MobileAds.instance.initialize();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // CONSENT (UMP) — required by AdMob before mediation partners
+  // (AppLovin, Unity Ads) are allowed to serve to EEA/UK/US users.
+  // Must run before MobileAds.instance.initialize().
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> initializeWithConsent() async {
+    await _requestConsent();
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await _requestTrackingAuthorization();
+    }
+
+    await MobileAds.instance.initialize();
+  }
+
+  Future<void> _requestConsent() async {
+    final completer = Completer<void>();
+    final params = ConsentRequestParameters();
+
+    ConsentInformation.instance.requestConsentInfoUpdate(
+      params,
+      () {
+        ConsentForm.loadAndShowConsentFormIfRequired((loadAndShowError) {
+          if (loadAndShowError != null) {
+            debugPrint('UMP consent form error: ${loadAndShowError.message}');
+          }
+          if (!completer.isCompleted) completer.complete();
+        });
+      },
+      (FormError error) {
+        debugPrint('UMP consent info update failed: ${error.message}');
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+
+    return completer.future;
+  }
+
+  Future<void> _requestTrackingAuthorization() async {
+    final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+    if (status == TrackingStatus.notDetermined) {
+      // Small delay recommended by Apple so the prompt doesn't appear
+      // before the app has finished its launch transition.
+      await Future.delayed(const Duration(milliseconds: 200));
+      await AppTrackingTransparency.requestTrackingAuthorization();
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -64,13 +128,23 @@ class AdService {
           _interstitialAd = ad;
           _isInterstitialLoading = false;
           _interstitialRetries = 0;
+          ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) {
+            if (_referralCode == null) return;
+            AttributionService().logAdRevenue(
+              valueMicros: valueMicros.toInt(),
+              adFormat: 'interstitial',
+              code: _referralCode!,
+              currency: currencyCode,
+              precision: precision.index,
+            );
+          };
           ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
+            onAdDismissedFullScreenContent: (dismissedAd) {
               _interstitialAd = null;
               // Pre-load next interstitial
               loadInterstitialAd();
             },
-            onAdFailedToShowFullScreenContent: (ad, error) {
+            onAdFailedToShowFullScreenContent: (failedAd, error) {
               _interstitialAd = null;
               _isInterstitialLoading = false;
               onInterstitialFailed?.call();
@@ -99,30 +173,53 @@ class AdService {
   // REWARDED ADS — Blueprint §3.3: gates AI coach queries
   // ══════════════════════════════════════════════════════════════
 
-  Future<bool> loadRewardedAd() async {
+  Future<bool> loadRewardedAd({String? adUnitId}) async {
+    final targetUnitId = adUnitId ?? AppConstants.rewardedAdUnitId;
+
+    // A different ad unit is cached/loading — it can't serve this request,
+    // so drop it and load the one actually asked for.
+    if (_rewardedAdUnitId != null && _rewardedAdUnitId != targetUnitId) {
+      _rewardedAd?.dispose();
+      _rewardedAd = null;
+      _isRewardedLoading = false;
+      _rewardedLoadCompleter = null;
+    }
+
     if (_rewardedAd != null) return true;
     if (_isRewardedLoading && _rewardedLoadCompleter != null) {
       return _rewardedLoadCompleter!.future;
     }
 
     _isRewardedLoading = true;
+    _rewardedAdUnitId = targetUnitId;
     _rewardedLoadCompleter = Completer<bool>();
 
     RewardedAd.load(
-      adUnitId: AppConstants.rewardedAdUnitId,
+      adUnitId: targetUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isRewardedLoading = false;
+          ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) {
+            if (_referralCode == null) return;
+            AttributionService().logAdRevenue(
+              valueMicros: valueMicros.toInt(),
+              adFormat: 'rewarded',
+              code: _referralCode!,
+              currency: currencyCode,
+              precision: precision.index,
+            );
+          };
           ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
+            onAdDismissedFullScreenContent: (dismissedAd) {
               _rewardedAd = null;
-              loadRewardedAd();
+              _rewardedAdUnitId = null;
             },
-            onAdFailedToShowFullScreenContent: (ad, error) {
+            onAdFailedToShowFullScreenContent: (failedAd, error) {
               debugPrint('Rewarded ad failed to show: ${error.message}');
               _rewardedAd = null;
+              _rewardedAdUnitId = null;
               _isRewardedLoading = false;
               onRewardedFailed?.call();
             },
@@ -136,6 +233,7 @@ class AdService {
           debugPrint('If "No fill" — add your device hash to AdMob console > Settings > Test devices');
           debugPrint('Find hash: run app → check logcat for "Use new consent" line with device ID');
           _rewardedAd = null;
+          _rewardedAdUnitId = null;
           _isRewardedLoading = false;
           if (_rewardedLoadCompleter != null && !_rewardedLoadCompleter!.isCompleted) {
             _rewardedLoadCompleter!.complete(false);
@@ -188,7 +286,18 @@ class AdService {
         onAdOpened: (ad) {},
         onAdClosed: (ad) {},
       ),
-    )..load();
+    );
+    ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) {
+      if (_referralCode == null) return;
+      AttributionService().logAdRevenue(
+        valueMicros: valueMicros.toInt(),
+        adFormat: 'banner',
+        code: _referralCode!,
+        currency: currencyCode,
+        precision: precision.index,
+      );
+    };
+    ad.load();
     return ad;
   }
 
@@ -219,7 +328,18 @@ class AdService {
           onNativeAdImpression?.call(0.0);
         },
       ),
-    )..load();
+    );
+    ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) {
+      if (_referralCode == null) return;
+      AttributionService().logAdRevenue(
+        valueMicros: valueMicros.toInt(),
+        adFormat: 'native',
+        code: _referralCode!,
+        currency: currencyCode,
+        precision: precision.index,
+      );
+    };
+    ad.load();
     return ad;
   }
 
@@ -281,7 +401,7 @@ class RewardedAdNotifier extends StateNotifier<AdLoadState> {
 
   bool get rewardGranted => _rewardGranted;
 
-  Future<bool> load() async {
+  Future<bool> load({String? adUnitId}) async {
     state = AdLoadState.loading;
     _rewardGranted = false;
     final service = _ref.read(adServiceProvider);
@@ -291,7 +411,7 @@ class RewardedAdNotifier extends StateNotifier<AdLoadState> {
     service.onRewardedFailed = () {
       if (mounted) state = AdLoadState.failed;
     };
-    final loaded = await service.loadRewardedAd();
+    final loaded = await service.loadRewardedAd(adUnitId: adUnitId);
     if (mounted) {
       state = loaded ? AdLoadState.loaded : AdLoadState.failed;
     }
