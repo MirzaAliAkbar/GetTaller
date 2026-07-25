@@ -75,6 +75,10 @@ class OnboardingNotifier extends StateNotifier<OnboardingData?> {
     state = (state ?? _emptyData).copyWith(activityDaysPerWeek: days);
   }
 
+  void setReferralCode(String? code) {
+    state = (state ?? _emptyData).copyWith(referralCode: code);
+  }
+
   void reset() => state = null;
 
   OnboardingData get _emptyData => OnboardingData(

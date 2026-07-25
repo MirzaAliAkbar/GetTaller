@@ -19,6 +19,7 @@ class PersistedUserData {
   final String analysisDepth;
   final double? targetHeightCm;
   final int activityDaysPerWeek;
+  final String? referralCode;
 
   PersistedUserData({
     this.name,
@@ -34,6 +35,7 @@ class PersistedUserData {
     this.analysisDepth = 'accurate',
     this.targetHeightCm,
     this.activityDaysPerWeek = 3,
+    this.referralCode,
   });
 
   int get ageYears {
@@ -57,6 +59,7 @@ class PersistedUserData {
         'analysisDepth': analysisDepth,
         'targetHeightCm': targetHeightCm,
         'activityDaysPerWeek': activityDaysPerWeek,
+        if (referralCode != null) 'referralCode': referralCode,
       };
 
   factory PersistedUserData.fromJson(Map<String, dynamic> json) =>
@@ -74,6 +77,7 @@ class PersistedUserData {
         analysisDepth: json['analysisDepth'] as String? ?? 'accurate',
         targetHeightCm: (json['targetHeightCm'] as num?)?.toDouble(),
         activityDaysPerWeek: json['activityDaysPerWeek'] as int? ?? 3,
+        referralCode: json['referralCode'] as String?,
       );
 }
 

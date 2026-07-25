@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Influencer — GetTaller Admin</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="stylesheet" href="/admin/styles.css">
+  <style>
+    .form-hint { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+    .char-count { text-align: right; font-size: 11px; color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+  <div class="header admin-header">
+    <div class="header-logo">GetTaller <span>Admin</span></div>
+    <div class="header-nav">
+      <a href="/admin/">Dashboard</a>
+      <a href="/admin/add-influencer.html" class="active">Add Influencer</a>
+      <a href="/admin/payouts.html">Payouts</a>
+      <button class="btn-logout" onclick="handleAdminLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div class="form-card">
+      <div class="card-header">Add New Influencer</div>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:24px;">
+        Creates a referral code and dashboard account. The influencer can sign in immediately.
+      </p>
+
+      <div id="errorMsg" style="display:none;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px;"></div>
+
+      <div class="form-group">
+        <label for="displayName">Display Name</label>
+        <input type="text" id="displayName" placeholder="e.g. Sarah Fit" autocomplete="off">
+        <div class="form-hint">Shown on their dashboard and in referral screens.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="influencerId">Influencer ID (slug)</label>
+        <input type="text" id="influencerId" placeholder="e.g. sarah_fit" autocomplete="off" style="font-family:monospace;">
+        <div class="form-hint">Lowercase, underscores/hyphens only. Unique identifier.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="code">Referral Code</label>
+        <input type="text" id="code" placeholder="e.g. SARAH20" autocomplete="off" autocapitalize="characters" maxlength="20" style="font-family:monospace;letter-spacing:1px;">
+        <div class="form-hint">3-20 characters, letters and numbers only. Will be uppercased.</div>
+        <div class="char-count" id="codeCount">0 / 20</div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Dashboard Password</label>
+        <input type="password" id="password" placeholder="Min 8 characters" minlength="8">
+        <div class="form-hint">Used to sign in at studios.grayonix.com/dashboard. They can't change it themselves yet.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="sharePercent">Initial Revenue Share</label>
+        <select id="sharePercent">
+          <option value="5">5% (standard)</option>
+          <option value="20">20% (pre-approved / VIP)</option>
+        </select>
+        <div class="form-hint">
+          5% auto-flips to 20% at 5,000 signups. Set to 20% manually for pre-approved partners.
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="/admin/" class="btn btn-secondary">Cancel</a>
+        <button class="btn btn-primary" onclick="createInfluencer()">Create Influencer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/dashboard/app.js"></script>
+  <script src="/admin/app.js"></script>
+  <script>
+    if (!getToken()) { window.location.href = '/admin/login.html'; }
+
+    // ── Live char count on code field ──
+    document.getElementById('code').addEventListener('input', function() {
+      document.getElementById('codeCount').textContent = `${this.value.length} / 20`;
+    });
+
+    // ── Auto-uppercase code field ──
+    document.getElementById('code').addEventListener('blur', function() {
+      this.value = this.value.toUpperCase();
+    });
+
+    // ── Create influencer ──
+    async function createInfluencer() {
+      const displayName = document.getElementById('displayName').value.trim();
+      const influencerId = document.getElementById('influencerId').value.trim().toLowerCase();
+      const code = document.getElementById('code').value.toUpperCase().trim();
+      const password = document.getElementById('password').value;
+      const sharePercent = parseInt(document.getElementById('sharePercent').value);
+      const errorMsg = document.getElementById('errorMsg');
+
+      errorMsg.style.display = 'none';
+
+      // Validation
+      const errors = [];
+      if (!displayName) errors.push('Display name is required.');
+      if (!influencerId) errors.push('Influencer ID is required.');
+      if (!influencerId.match(/^[a-z0-9_-]+$/)) errors.push('Influencer ID: lowercase letters, numbers, underscores, hyphens only.');
+      if (!code) errors.push('Referral code is required.');
+      if (code.length < 3) errors.push('Code must be at least 3 characters.');
+      if (!password || password.length < 8) errors.push('Password must be at least 8 characters.');
+
+      if (errors.length) {
+        errorMsg.textContent = errors.join(' ');
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      try {
+        await adminApi('/codes', {
+          method: 'POST',
+          body: { code, influencerId, displayName, sharePercent, password },
+        });
+        showToast(`✅ ${displayName} created! Code: ${code}`);
+        // Reset form
+        ['displayName','influencerId','code','password'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('sharePercent').value = '5';
+        document.getElementById('codeCount').textContent = '0 / 20';
+        btn.disabled = false;
+        btn.textContent = 'Create Influencer';
+      } catch (e) {
+        errorMsg.textContent = e.message;
+        errorMsg.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Create Influencer';
+      }
+    }
+  </script>
+</body>
+</html>

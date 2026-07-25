@@ -53,14 +53,18 @@ class AppConstants {
       'ca-app-pub-7643307621517317/7896084698'; // Your Plan (onboarding completion)
   static const String interstitialAnalysisAdUnitId =
       'ca-app-pub-7643307621517317/2643758014'; // Analysis Screen
+  static const String interstitialWorkoutCompleteAdUnitId =
+      'ca-app-pub-7643307621517317/4324162465'; // Back to Daily Plan (workout complete)
 
   // Rewarded & Native
   static const String rewardedAdUnitId =
-      'ca-app-pub-7643307621517317/1863781970';
+      'ca-app-pub-7643307621517317/1863781970'; // AI Coach queries
+  static const String rewardedRepeatWorkoutAdUnitId =
+      'ca-app-pub-7643307621517317/1391290059'; // Repeat Workout unlock
   static const String nativeAdUnitId = 'ca-app-pub-7643307621517317/7265529308';
 
-  static const int rewardedVideoGrantCount = 3;
-  static const int initialFreeAiQueries = 3;
+  static const int rewardedVideoGrantCount = 2;
+  static const int initialFreeAiQueries = 2;
 
   // ── Storage ──
   static const String prefOnboardingComplete = 'onboarding_complete';
@@ -84,4 +88,11 @@ class AppConstants {
   // ── Exercise ──
   static const int planTotalDays = 90;
   static const int exercisesPerDay = 5;
+
+  // ── Affiliate / Referral ──
+  static const String prefInstallId = 'install_id';
+  static const String prefReferralCode = 'referral_code';
+  static const String attributionBaseUrl = 'https://studios.grayonix.com';
+  static const int attributionFlushIntervalMs = 10000;
+  static const int attributionBatchSize = 5;
 }

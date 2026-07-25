@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in — GetTaller Affiliate</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <style>
+    .input-group { margin-bottom: 20px; }
+    .input-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--color-text); }
+    .input-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 15px; transition: border-color 0.2s; }
+    .input-group input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(10, 126, 61, 0.1); }
+    .login-footer { text-align: center; margin-top: 24px; font-size: 13px; color: var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="logo">GetTaller <span style="color:var(--color-text);font-weight:400">Affiliate</span></div>
+      <div class="subtitle">Sign in to your dashboard</div>
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="input-group">
+        <label for="code">Referral Code</label>
+        <input type="text" id="code" placeholder="e.g. SARAH20" autocomplete="off" autocapitalize="characters" autofocus>
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Your dashboard password">
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
+        Sign In
+      </button>
+
+      <div class="login-footer">
+        New influencer? <a href="https://gettaller.app/affiliate" style="color:var(--color-primary);text-decoration:none;font-weight:600;">Apply now</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Enter key submits login
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+      const code = document.getElementById('code').value.toUpperCase().trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const errorMsg = document.getElementById('errorMsg');
+
+      if (!code || !password) {
+        errorMsg.textContent = 'Please enter your code and password.';
+        errorMsg.classList.add('show');
+        return;
+      }
+
+      errorMsg.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const res = await fetch('/v1/influencer/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Invalid credentials.';
+          errorMsg.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+          return;
+        }
+
+        // Set the session cookie and redirect
+        document.cookie = `session_token=${data.token};path=/;max-age=${7*24*60*60};SameSite=Lax`;
+        window.location.href = '/dashboard/';
+      } catch (e) {
+        errorMsg.textContent = 'Connection error. Please try again.';
+        errorMsg.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    }
+  </script>
+</body>
+</html>

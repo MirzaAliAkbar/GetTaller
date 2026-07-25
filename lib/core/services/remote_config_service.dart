@@ -14,6 +14,8 @@ class RemoteConfigService {
     await _remoteConfig.setDefaults({
       'opencode_zen_api_key': '', // Empty default - fallback to build-time key
       'ai_coach_enabled': true,
+      'attribution_base_url': 'https://studios.grayonix.com',
+      'attribution_enabled': true,
     });
 
     // Fetch remote values (cache for 1 hour in production, 0 for testing)
@@ -38,5 +40,15 @@ class RemoteConfigService {
   /// Check if AI Coach is enabled
   bool isAiCoachEnabled() {
     return _remoteConfig.getBool('ai_coach_enabled');
+  }
+
+  /// Get attribution (affiliate) base URL from Remote Config
+  String getAttributionBaseUrl() {
+    return _remoteConfig.getString('attribution_base_url');
+  }
+
+  /// Check if attribution (affiliate) system is enabled (kill switch)
+  bool isAttributionEnabled() {
+    return _remoteConfig.getBool('attribution_enabled');
   }
 }

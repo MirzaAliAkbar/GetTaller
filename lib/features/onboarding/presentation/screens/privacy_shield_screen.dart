@@ -58,7 +58,7 @@ class PrivacyShieldScreen extends StatelessWidget {
               _buildPrivacyPoint(
                 Icons.no_accounts_rounded,
                 'No Account Required',
-                'No email, no password, no tracking. Use GetTaller anonymously.',
+                'No email, no password, and no tracking unless you choose to enter a referral code (and then it\'s anonymous and only used to credit your influencer).',
               ),
               const SizedBox(height: 24),
               _buildPrivacyPoint(
@@ -71,7 +71,7 @@ class PrivacyShieldScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => context.push('/onboarding/gender'),
+                  onPressed: () => context.push('/onboarding/referral'),
                   child: const Text('I Understand & Agree'),
                 ),
               ),

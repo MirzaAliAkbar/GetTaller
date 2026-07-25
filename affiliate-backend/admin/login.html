@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — GetTaller Affiliate</title>
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <link rel="stylesheet" href="/admin/styles.css">
+  <style>
+    .login-page { background: linear-gradient(135deg, #f4f6f9, #e8f0fe); }
+    .login-card .logo { color: var(--color-admin-primary); }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="logo">GetTaller <span style="color:var(--color-text);font-weight:400">Admin</span></div>
+      <div class="subtitle">Admin access — manage influencers &amp; payouts</div>
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="input-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="admin username" autocomplete="off" autofocus>
+      </div>
+
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Admin password">
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()" style="background:var(--color-admin-primary);">
+        Sign In
+      </button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const errorMsg = document.getElementById('errorMsg');
+
+      if (!username || !password) {
+        errorMsg.textContent = 'Please enter your username and password.';
+        errorMsg.classList.add('show');
+        return;
+      }
+
+      errorMsg.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const res = await fetch('/v1/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Invalid credentials.';
+          errorMsg.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+          return;
+        }
+
+        document.cookie = `session_token=${data.token};path=/;max-age=${7*24*60*60};SameSite=Lax`;
+        window.location.href = '/admin/';
+      } catch (e) {
+        errorMsg.textContent = 'Connection error. Please try again.';
+        errorMsg.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    }
+  </script>
+</body>
+</html>

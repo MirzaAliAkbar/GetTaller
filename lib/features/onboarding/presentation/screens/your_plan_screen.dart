@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import '../../../../core/ads/ad_service.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/attribution_service.dart';
 import '../providers/onboarding_provider.dart';
 
 /// Final onboarding screen — "Your 90-Day Growth Plan is ready"
@@ -47,6 +49,19 @@ class _YourPlanScreenState extends ConsumerState<YourPlanScreen> {
       await userDataService.saveUserData(persisted);
       await userDataService.addHeightMeasurement(onboardingData.currentHeightCm);
       await userDataService.savePlanStartDate(DateTime.now());
+
+      // If user entered a referral code, log signup to attribution backend
+      if (onboardingData.referralCode != null) {
+        await AttributionService().setReferralCode(onboardingData.referralCode!);
+        AttributionService().logSignup(
+          code: onboardingData.referralCode!,
+          country: null, // filled server-side via CF geolocation
+          platform: defaultTargetPlatform == TargetPlatform.android
+              ? 'android'
+              : 'ios',
+          appVersion: AppConstants.appVersionName,
+        );
+      }
     }
 
     final prefs = await SharedPreferences.getInstance();

@@ -12,6 +12,7 @@ class OnboardingData {
   final String analysisDepth; // 'fast' | 'accurate'
   final double? targetHeightCm;
   final int activityDaysPerWeek;
+  final String? referralCode;
 
   const OnboardingData({
     this.name,
@@ -26,6 +27,7 @@ class OnboardingData {
     required this.analysisDepth,
     this.targetHeightCm,
     required this.activityDaysPerWeek,
+    this.referralCode,
   });
 
   int get ageYears {
@@ -53,6 +55,7 @@ class OnboardingData {
     String? analysisDepth,
     double? targetHeightCm,
     int? activityDaysPerWeek,
+    String? referralCode,
   }) {
     return OnboardingData(
       name: name ?? this.name,
@@ -67,6 +70,7 @@ class OnboardingData {
       analysisDepth: analysisDepth ?? this.analysisDepth,
       targetHeightCm: targetHeightCm ?? this.targetHeightCm,
       activityDaysPerWeek: activityDaysPerWeek ?? this.activityDaysPerWeek,
+      referralCode: referralCode ?? this.referralCode,
     );
   }
 
@@ -84,6 +88,7 @@ class OnboardingData {
     'targetHeightCm': targetHeightCm,
     'activityDaysPerWeek': activityDaysPerWeek,
     'ageYears': ageYears,
+    if (referralCode != null) 'referralCode': referralCode,
   };
 
   factory OnboardingData.fromJson(Map<String, dynamic> json) {
@@ -100,6 +105,7 @@ class OnboardingData {
       analysisDepth: json['analysisDepth'] as String,
       targetHeightCm: (json['targetHeightCm'] as num?)?.toDouble(),
       activityDaysPerWeek: (json['activityDaysPerWeek'] as num).toInt(),
+      referralCode: json['referralCode'] as String?,
     );
   }
 }

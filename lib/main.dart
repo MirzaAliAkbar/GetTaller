@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'app.dart';
+import 'core/ads/ad_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/hive_service.dart';
 import 'core/services/user_data_service.dart';
 import 'core/services/ai_service.dart';
+import 'core/services/attribution_service.dart';
 import 'core/utils/unit_converter.dart';
 
 void main() async {
@@ -55,6 +56,25 @@ Future<void> _initBackgroundServices(NotificationService notifService) async {
     await notifService.init();
   } catch (_) {}
   try {
-    await MobileAds.instance.initialize();
+    // Gathers UMP (GDPR/US-states) consent and, on iOS, requests App
+    // Tracking Transparency authorization *before* the Google Mobile
+    // Ads SDK — and its AppLovin/Unity mediation adapters — initialize.
+    // Skipping this or reordering it risks partners being blocked from
+    // serving to EEA/UK/US users and lower iOS fill/eCPM.
+    await AdService().initializeWithConsent();
+    // Load cached referral code for ad attribution
+    await AdService().initAttribution();
   } catch (_) {}
+
+  // Initialize attribution service (install ID, referral code cache)
+  try {
+    await AttributionService().initialize();
+  } catch (_) {}
+
+  // Daily retention ping — only for referred users (fire-and-forget)
+  if (AttributionService().hasReferralCode) {
+    try {
+      await AttributionService().logDailyPing();
+    } catch (_) {}
+  }
 }

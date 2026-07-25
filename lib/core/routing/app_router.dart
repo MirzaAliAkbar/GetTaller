@@ -5,6 +5,7 @@ import '../services/analytics_service.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../../features/onboarding/presentation/screens/privacy_shield_screen.dart';
+import '../../features/onboarding/presentation/screens/referral_code_screen.dart';
 import '../../features/onboarding/presentation/screens/gender_selection_screen.dart';
 import '../../features/onboarding/presentation/screens/birth_date_screen.dart';
 import '../../features/onboarding/presentation/screens/current_measurements_screen.dart';
@@ -48,6 +49,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding/privacy',
         name: 'privacyShield',
         builder: (context, state) => const PrivacyShieldScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/referral',
+        name: 'referral',
+        builder: (context, state) => const ReferralCodeScreen(),
       ),
       GoRoute(
         path: '/onboarding/gender',
