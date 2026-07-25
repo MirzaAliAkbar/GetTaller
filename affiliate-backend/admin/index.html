@@ -29,7 +29,7 @@
   <script src="/dashboard/app.js"></script>
   <script src="/admin/app.js"></script>
   <script>
-    if (!getToken()) { window.location.href = '/admin/login.html'; }
+    if (!adminGetToken()) { window.location.href = '/admin/login.html'; }
 
     async function loadDashboard() {
       const container = document.getElementById('content');
@@ -43,7 +43,7 @@
         stats.influencers = influencers.influencers;
         renderDashboard(container, stats);
       } catch {
-        clearToken();
+        adminClearToken();
         window.location.href = '/admin/login.html';
       }
     }

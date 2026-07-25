@@ -74,7 +74,7 @@
           return;
         }
 
-        setToken(data.token);
+        adminSetToken(data.token);
         window.location.href = '/admin/';
       } catch (e) {
         errorMsg.textContent = 'Connection error. Please try again.';

@@ -36,7 +36,7 @@
   <script src="/dashboard/app.js"></script>
   <script src="/admin/app.js"></script>
   <script>
-    if (!getToken()) window.location.href = '/admin/login.html';
+    if (!adminGetToken()) window.location.href = '/admin/login.html';
 
     async function loadPayouts() {
       const container = document.getElementById('content');
@@ -46,7 +46,7 @@
         const data = await adminApi('/payouts');
         renderPayouts(container, data);
       } catch {
-        clearToken();
+        adminClearToken();
         window.location.href = '/admin/login.html';
       }
     }

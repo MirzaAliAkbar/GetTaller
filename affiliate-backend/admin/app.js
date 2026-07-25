@@ -6,9 +6,41 @@ const fmtCurrency = formatCurrency;
 const fmtNumber = formatNumber;
 const fmtDate = formatDate;
 
-// ── Admin API helpers ──
+// ── Admin session management (separate key from influencer) ──
+function adminGetToken() {
+  const match = document.cookie.match(/admin_session_token=([^;]+)/);
+  if (match && match[1]) return match[1];
+  try { return localStorage.getItem('admin_session_token'); } catch { return null; }
+}
+
+function adminSetToken(token) {
+  const d = new Date();
+  d.setTime(d.getTime() + 7 * 24 * 60 * 60 * 1000);
+  document.cookie = `admin_session_token=${token};path=/;expires=${d.toUTCString()};SameSite=Lax`;
+  try { localStorage.setItem('admin_session_token', token); } catch {}
+}
+
+function adminClearToken() {
+  document.cookie = 'admin_session_token=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  try { localStorage.removeItem('admin_session_token'); } catch {}
+}
+
+// ── Admin API helpers (self-contained, uses admin session) ──
 async function adminApi(path, opts = {}) {
-  return api('/v1/admin' + path, opts);
+  const headers = { 'Content-Type': 'application/json', ...opts.headers };
+  const token = adminGetToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}/v1/admin${path}`, {
+    headers,
+    credentials: 'include',
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    method: opts.method || (opts.body ? 'POST' : 'GET'),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
 }
 
 // ── Get influencer stats table row ──
@@ -124,7 +156,7 @@ function filterTable() {
 
 // ── Handle admin nav ──
 function handleAdminLogout() {
-  fetch('/v1/admin/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } }).catch(()=>{});
-  clearToken();
+  fetch('/v1/admin/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + adminGetToken() } }).catch(()=>{});
+  adminClearToken();
   window.location.href = '/admin/login.html';
 }

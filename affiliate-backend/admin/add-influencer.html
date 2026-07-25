@@ -79,7 +79,7 @@
   <script src="/dashboard/app.js"></script>
   <script src="/admin/app.js"></script>
   <script>
-    if (!getToken()) { window.location.href = '/admin/login.html'; }
+    if (!adminGetToken()) { window.location.href = '/admin/login.html'; }
 
     // ── Live char count on code field ──
     document.getElementById('code').addEventListener('input', function() {
