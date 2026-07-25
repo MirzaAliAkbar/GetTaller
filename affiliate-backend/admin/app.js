@@ -28,7 +28,7 @@ function createInfluencerRow(i) {
       ${hasFraud ? '<span class="fraud-flag fraud-critical">⚠</span>' : ''}
     </td>
     <td class="actions-cell">
-      <a href="/admin/influencer.html?id=${i.code}" class="btn btn-secondary btn-sm">View</a>
+      <a href="/admin/influencer.html?id=${i.influencerId}" class="btn btn-secondary btn-sm">View</a>
       <button class="btn btn-sm ${i.active ? 'btn-danger' : 'btn-primary'}"
               onclick="toggleInfluencer('${i.code}', ${!i.active})">
         ${i.active ? 'Deactivate' : 'Activate'}

@@ -301,8 +301,8 @@ async function handleInfluencerStats(request: Request, env: Env, influencerId: s
 
   // ── Influencer profile ──
   const profile = await env.DB.prepare(
-    'SELECT display_name, code, share_percent, total_installs, created_at, last_payout_at FROM referral_codes WHERE influencer_id = ?'
-  ).bind(influencerId).first<{ display_name: string; code: string; share_percent: number; total_installs: number; created_at: string; last_payout_at: string | null }>();
+    'SELECT display_name, code, share_percent, total_installs, created_at, last_payout_at, active FROM referral_codes WHERE influencer_id = ?'
+  ).bind(influencerId).first<{ display_name: string; code: string; share_percent: number; total_installs: number; created_at: string; last_payout_at: string | null; active: number }>();
 
   // ── Earnings (revenue * share%) ──
   const sharePercent = profile?.share_percent ?? 5;
@@ -396,6 +396,7 @@ async function handleInfluencerStats(request: Request, env: Env, influencerId: s
       displayName: profile?.display_name ?? 'Unknown',
       code: profile?.code ?? '',
       sharePercent,
+      active: !!profile?.active,
       totalInstalls: profile?.total_installs ?? 0,
       memberSince: profile?.created_at ?? '',
       lastPayoutAt: profile?.last_payout_at ?? null,
