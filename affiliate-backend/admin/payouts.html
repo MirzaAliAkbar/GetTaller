@@ -176,7 +176,7 @@
         resultDiv.innerHTML = `
           <div style="background:#d1fae5;padding:14px;border-radius:var(--radius-sm);">
             <strong>✅ Reconciliation complete</strong>
-            <p style="font-size:13px;margin-top:6px;">Month: ${result.month} · ${result.entries.length} payouts computed · Total: ${fmtCurrency(result.totalPayoutMicros / 1000000)}</p>
+            <p style="font-size:13px;margin-top:6px;">Month: ${result.month} · ${(result.results || []).length} payouts computed · Total: ${fmtCurrency((result.results || []).reduce((s, r) => s + (r.payoutAmount || 0), 0))}</p>
           </div>
           <div style="margin-top:8px;">
             <button class="btn btn-sm btn-primary" onclick="location.reload()">Refresh page</button>

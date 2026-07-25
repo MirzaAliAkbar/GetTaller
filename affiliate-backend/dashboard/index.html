@@ -73,7 +73,7 @@
 
         <div class="stats-row">
           ${createStatCard('Total Signups', formatNumber(stats.totalSignups),
-            influencer.sharePercent === 20 ? '🎉 Tier: 20% revenue share' : 'Tier: 5% revenue share')}
+            `Tier: ${influencer.sharePercent}% revenue share`)}
           ${createStatCard('Revenue Generated (est.)', formatCurrency(stats.totalRevenue),
             'AdMob estimated revenue')}
           ${createStatCard('Your Earnings (est.)', formatCurrency(stats.earningsEstimate),

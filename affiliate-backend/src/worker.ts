@@ -87,11 +87,16 @@ async function getSession(env: Env, token: string): Promise<{ userId: string; us
 }
 
 function getTokenFromRequest(request: Request): string | null {
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/session_token=([^;]+)/);
-  if (match) return match[1];
+  // Priority 1: Authorization header (used by adminApi and api())
   const auth = request.headers.get('Authorization') || '';
   if (auth.startsWith('Bearer ')) return auth.slice(7);
+  // Priority 2: admin_session_token cookie (admin pages, set by adminSetToken)
+  const cookie = request.headers.get('Cookie') || '';
+  let match = cookie.match(/admin_session_token=([^;]+)/);
+  if (match) return match[1];
+  // Priority 3: session_token cookie (influencer pages, set by setToken or server Set-Cookie)
+  match = cookie.match(/session_token=([^;]+)/);
+  if (match) return match[1];
   return null;
 }
 
@@ -476,7 +481,7 @@ async function handleAdminLogin(request: Request, env: Env): Promise<Response> {
 
   // Set session cookie server-side for reliability
   const headers = new Headers(corsHeaders);
-  headers.set('Set-Cookie', `session_token=${token};path=/;max-age=${7*24*60*60};SameSite=Lax;Secure`);
+  headers.set('Set-Cookie', `admin_session_token=${token};path=/;max-age=${7*24*60*60};SameSite=Lax;Secure`);
   headers.set('Content-Type', 'application/json');
 
   return new Response(JSON.stringify({ ok: true, token, username }), {
