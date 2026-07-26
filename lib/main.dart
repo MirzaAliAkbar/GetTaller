@@ -10,6 +10,7 @@ import 'core/services/hive_service.dart';
 import 'core/services/user_data_service.dart';
 import 'core/services/ai_service.dart';
 import 'core/services/attribution_service.dart';
+import 'core/services/remote_config_service.dart';
 import 'core/utils/unit_converter.dart';
 
 void main() async {
@@ -64,6 +65,11 @@ Future<void> _initBackgroundServices(NotificationService notifService) async {
     await AdService().initializeWithConsent();
     // Load cached referral code for ad attribution
     await AdService().initAttribution();
+  } catch (_) {}
+
+  // Initialize Remote Config first (provides attribution base URL + kill switch)
+  try {
+    await RemoteConfigService().initialize();
   } catch (_) {}
 
   // Initialize attribution service (install ID, referral code cache)

@@ -47,5 +47,15 @@
 	<true/>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-7643307621517317~4891446164</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>GetTaller uses your data to show ads that are more relevant to you and to help keep the app free.</string>
+	<!--
+	  SKAdNetworkItems: required for AppLovin and Unity Ads mediation to attribute
+	  installs on iOS 14+. Generate the full list (AppLovin + all its mediated
+	  networks, plus Unity's) from AppLovin's Info.plist Generator at
+	  https://support.applovin.com/en/max/ios/overview/skadnetwork and merge with
+	  any IDs Unity's dashboard flags as missing. Paste the resulting
+	  <key>SKAdNetworkItems</key><array>...</array> block here.
+	-->
 </dict>
 </plist>

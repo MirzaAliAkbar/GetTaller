@@ -8,8 +8,8 @@ plugins {
 
 android {
     namespace = "com.grayonix.GetTaller"
-    compileSdk = 35
-    ndkVersion = "25.1.8937393"
+    compileSdk = 36
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -32,8 +32,8 @@ android {
 
     defaultConfig {
         applicationId = "com.grayonix.GetTaller"
-        minSdk = 23
-        targetSdk = 35  // Google Play requires API 35+
+        minSdk = 24
+        targetSdk = 36  // Android 16 (API 36) — Google Play requirement
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -56,4 +56,10 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation platform('com.google.firebase:firebase-bom:33.7.0')
     implementation 'com.google.firebase:firebase-analytics'
+
+    // AdMob mediation adapters — resolved natively by the Google Mobile Ads SDK
+    // per the mediation groups configured in the AdMob console.
+    implementation 'com.google.ads.mediation:applovin:13.6.3.0'
+    implementation 'com.unity3d.ads:unity-ads:4.19.0'
+    implementation 'com.google.ads.mediation:unity:4.19.0.0'
 }

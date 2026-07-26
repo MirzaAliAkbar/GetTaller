@@ -14,8 +14,8 @@ import '../../../../shared/widgets/banner_ad_widget.dart';
 /// Chat interface with inline Native Feed Ads and Rewarded Video gating.
 ///
 /// Query system:
-///   - 3 free queries (resets each calendar day)
-///   - After free exhausted → watch rewarded ad → +5 more queries
+///   - 2 free queries, granted once for the lifetime of the install
+///   - After free exhausted → watch rewarded ad → +2 more queries, every time, no cap
 ///   - All state persisted in SharedPreferences (no tab-switch loophole)
 class AiCoachTab extends ConsumerStatefulWidget {
   const AiCoachTab({super.key});
@@ -29,13 +29,12 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
   final _scrollController = ScrollController();
   List<ChatMessage> _messages = [];
 
-  int _dailyRemaining = AppConstants.initialFreeAiQueries;
+  int _queriesRemaining = AppConstants.initialFreeAiQueries;
   bool _isLoading = false;
   bool _showRewardedPrompt = false;
 
   // ── SharedPreferences keys ──
-  static const _keyDailyDate = 'ai_daily_date';
-  static const _keyDailyRemaining = 'ai_daily_remaining';
+  static const _keyQueriesRemaining = 'ai_queries_remaining_lifetime';
   static const _keyChatHistory = 'ai_chat_history_v2';
 
   // ═══════════════════════════════════════════════════════════════
@@ -294,16 +293,13 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
 
   Future<void> _loadQueryState() async {
     final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().substring(0, 10); // yyyy-MM-dd
-    final lastDate = prefs.getString(_keyDailyDate) ?? '';
 
-    if (lastDate != today) {
-      // New day — reset daily quota
-      _dailyRemaining = AppConstants.initialFreeAiQueries;
-      await prefs.setString(_keyDailyDate, today);
-      await prefs.setInt(_keyDailyRemaining, _dailyRemaining);
+    if (!prefs.containsKey(_keyQueriesRemaining)) {
+      // First launch ever — grant the one-time lifetime free queries.
+      _queriesRemaining = AppConstants.initialFreeAiQueries;
+      await prefs.setInt(_keyQueriesRemaining, _queriesRemaining);
     } else {
-      _dailyRemaining = prefs.getInt(_keyDailyRemaining) ??
+      _queriesRemaining = prefs.getInt(_keyQueriesRemaining) ??
           AppConstants.initialFreeAiQueries;
     }
 
@@ -312,10 +308,10 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
 
   Future<void> _saveQueryState() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyDailyRemaining, _dailyRemaining);
+    await prefs.setInt(_keyQueriesRemaining, _queriesRemaining);
   }
 
-  int get _totalRemaining => _dailyRemaining;
+  int get _totalRemaining => _queriesRemaining;
 
   // ═══════════════════════════════════════════════════════════════
   // CONTENT FILTER
@@ -339,7 +335,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
     final presetAnswer = _presetAnswers[trimmed];
     setState(() {
       _messages.add(ChatMessage(text: trimmed, isUser: true));
-      _dailyRemaining--;
+      _queriesRemaining--;
       _isLoading = true;
     });
     AnalyticsService().logAiCoachMessageSent();
@@ -397,21 +393,21 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
 
       final shown = await adNotifier.show();
 
-      // The ad was shown successfully. 
+      // The ad was shown successfully.
       // We grant queries immediately upon completion.
-      
+
       setState(() {
-        _dailyRemaining += 5; // Grant 5 queries as requested
+        _queriesRemaining += AppConstants.rewardedVideoGrantCount;
         _showRewardedPrompt = false;
       });
       await _saveQueryState();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 +5 queries unlocked!'),
+          SnackBar(
+            content: Text('🎉 +${AppConstants.rewardedVideoGrantCount} queries unlocked!'),
             backgroundColor: AppTheme.accent,
-            duration: Duration(seconds: 4),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -474,7 +470,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
                             style: Theme.of(context).textTheme.titleMedium),
                         Text(
                           _totalRemaining > 0
-                              ? '$_dailyRemaining queries remaining'
+                              ? '$_queriesRemaining queries remaining'
                               : 'Out of queries — watch ad to continue',
                           style: TextStyle(
                             fontSize: 12,
@@ -572,7 +568,8 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
                           backgroundColor: Colors.white,
                           foregroundColor: AppTheme.accentDark,
                         ),
-                        child: const Text('Watch Ad (Grant +5) 🎬'),
+                        child: Text(
+                            'Watch Ad (Grant +${AppConstants.rewardedVideoGrantCount}) 🎬'),
                       ),
                       const SizedBox(width: 12),
                       TextButton(
@@ -676,7 +673,7 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
         Text(
           'Ask me anything about height growth, nutrition, exercise, sleep, '
           'or your personalized 90-day plan. '
-          'You have $_dailyRemaining queries. Each query — including presets — '
+          'You have $_queriesRemaining queries. Each query — including presets — '
           'uses one from your quota.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
         ),

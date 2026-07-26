@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/constants.dart';
+import '../../../../core/ads/ad_service.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/analytics_service.dart';
@@ -214,9 +216,16 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
     // Mark level as completed
     final level = widget.levelNumber;
     if (level != null) {
-      ref.read(userDataServiceProvider).markLevelCompleted(level);
+      ref.read(userDataServiceProvider).markLevelCompleted(level).then((_) {
+        ref.invalidate(completedLevelsProvider);
+        ref.invalidate(currentDayNumberProvider);
+      });
     }
     AnalyticsService().logWorkoutCompleted(level ?? 0);
+    // Preload the workout-complete interstitial so it's ready by the time
+    // the user taps "Back to Daily Plan".
+    ref.read(adServiceProvider).loadInterstitialAd(
+        adUnitId: AppConstants.interstitialWorkoutCompleteAdUnitId);
     // Fire streak milestone if applicable
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final notif = ref.read(notificationServiceProvider);
@@ -237,6 +246,16 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
         duration: Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> _backToDailyPlan() async {
+    final adService = ref.read(adServiceProvider);
+    final shown = await adService.showInterstitialAd();
+    if (!shown) {
+      debugPrint('Workout-complete interstitial not ready — proceeding without ad');
+    }
+    if (!mounted) return;
+    context.pop();
   }
 
   void _openDemo() {
@@ -933,7 +952,7 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => context.pop(),
+                        onPressed: _backToDailyPlan,
                         style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                         child: const Text('Back to Daily Plan'),
                       ),

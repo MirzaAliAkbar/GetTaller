@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Account & Data - DailySnap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .nav {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: #764ba2;
+        }
+
+        .nav a.active {
+            color: #764ba2;
+            border-bottom: 2px solid #764ba2;
+            padding-bottom: 2px;
+        }
+
+        .content {
+            padding: 50px 40px;
+            line-height: 1.9;
+        }
+
+        .content h2 {
+            color: #667eea;
+            font-size: 28px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .content h2:first-child {
+            margin-top: 0;
+        }
+
+        .content h3 {
+            color: #333;
+            font-size: 20px;
+            margin-top: 28px;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+
+        .content p {
+            margin-bottom: 16px;
+            color: #555;
+        }
+
+        .content ul, .content ol {
+            margin-left: 24px;
+            margin-bottom: 16px;
+        }
+
+        .content li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .content strong {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .highlight-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 8px;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 8px;
+        }
+
+        .warning-box p {
+            margin-bottom: 0;
+            color: #856404;
+            font-weight: 600;
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 24px 0;
+        }
+
+        .section p {
+            margin-bottom: 12px;
+        }
+
+        .step {
+            background: #f8f9fa;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 16px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            font-size: 16px;
+            margin-right: 12px;
+        }
+
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .step p {
+            margin-top: 8px;
+            color: #555;
+        }
+
+        .email-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 14px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 16px 0;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .email-button:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 40px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .nav {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Delete Account & Data</h1>
+            <p>DailySnap — How to request account and data deletion</p>
+        </div>
+
+        <div class="nav">
+            <a href="../../index.html">← Home</a>
+            <a href="dailysnap-privacy-policy.html">Privacy Policy</a>
+            <a href="dailysnap-terms-of-service.html">Terms of Service</a>
+            <a href="dailysnap-delete-account.html" class="active">Delete Account</a>
+        </div>
+
+        <div class="content">
+            <div class="highlight-box">
+                <p>
+                    DailySnap stores ALL your diary data locally on your device. We never upload your diary entries or moments to our servers. Account deletion removes your login credentials and any cloud backup from your Google Drive.
+                </p>
+            </div>
+
+            <h2>How to Delete Your Account</h2>
+            <p>
+                To request permanent deletion of your DailySnap account and associated data, follow these steps:
+            </p>
+
+            <div class="step">
+                <p>
+                    <span class="step-number">1</span>
+                    <span class="step-title">Open DailySnap and go to Profile</span>
+                </p>
+                <p>
+                    Open the app, tap the Profile icon in the top-right corner, then tap <strong>Log Out</strong>.
+                </p>
+            </div>
+
+            <div class="step">
+                <p>
+                    <span class="step-number">2</span>
+                    <span class="step-title">Send us an email</span>
+                </p>
+                <p>
+                    Email us at <strong>AliAkbar@tutamail.com</strong> with the subject line: <strong>"Delete My DailySnap Account"</strong>
+                </p>
+                <p>
+                    Include the <strong>email address</strong> you used to sign in to DailySnap (Google account or email/password).
+                </p>
+                <a href="mailto:AliAkbar@tutamail.com?subject=Delete%20My%20DailySnap%20Account" class="email-button">Send Deletion Request Email</a>
+            </div>
+
+            <div class="step">
+                <p>
+                    <span class="step-number">3</span>
+                    <span class="step-title">Wait for confirmation</span>
+                </p>
+                <p>
+                    We will process your request and send you a confirmation email within <strong>7 business days</strong>. Your account and associated data will be permanently deleted at that time.
+                </p>
+            </div>
+
+            <h2>What Gets Deleted</h2>
+            <p>
+                When you request account deletion, the following data is permanently removed:
+            </p>
+            <ul>
+                <li><strong>Firebase Auth Account:</strong> Your login credentials (Google Sign-In or email/password)</li>
+                <li><strong>User Profile:</strong> Your display name, email, city, and country stored in Firestore</li>
+                <li><strong>Cloud Backup:</strong> Any DailySnap backup file stored in your Google Drive's hidden app-data folder (we delete it from our side; you can also delete it manually from your Drive)</li>
+                <li><strong>Premium Subscription:</strong> Any active premium status is revoked</li>
+            </ul>
+
+            <h2>What Stays on Your Device</h2>
+
+            <div class="warning-box">
+                <p>
+                    IMPORTANT: Your diary data (entries, moments, photos, mood data) is stored locally on YOUR device — not on our servers. We cannot access or delete it remotely.
+                </p>
+            </div>
+
+            <p>
+                After account deletion, your local diary data remains on your device until you:
+            </p>
+            <ul>
+                <li><strong>Uninstall DailySnap</strong> — this removes all app data from your device</li>
+                <li><strong>Delete individual moments</strong> — swipe left on any moment in the timeline to remove it</li>
+            </ul>
+            <p>
+                Since your data is entirely local, no third party (including us) has access to it after account deletion.
+            </p>
+
+            <h2>Retention Period</h2>
+            <ul>
+                <li><strong>Account deletion:</strong> Processed within 7 business days of your email request</li>
+                <li><strong>Firebase user record:</strong> Deleted immediately upon processing</li>
+                <li><strong>Firestore user profile:</strong> Deleted immediately upon processing</li>
+                <li><strong>Cloud backup:</strong> Deleted from Google Drive immediately upon processing (you can also delete it yourself from your Drive at any time)</li>
+            </ul>
+
+            <h2>Questions?</h2>
+            <p>
+                If you have any questions about the deletion process, contact us at:
+            </p>
+            <div class="section">
+                <p>
+                    <strong>Email:</strong> <a href="mailto:AliAkbar@tutamail.com">AliAkbar@tutamail.com</a><br>
+                    <strong>Developer:</strong> Grayonix Studios
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>DailySnap Account Deletion</strong></p>
+            <p>Your data is yours. We respect your right to delete it.</p>
+            <p><a href="../../index.html">← Back to Home</a></p>
+            <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">
+                &copy; 2026 Grayonix Studios. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

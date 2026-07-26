@@ -144,7 +144,10 @@ class AttributionService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+      debugPrint('Attribution API $path returned ${response.statusCode}');
+    } catch (e) {
+      debugPrint('Attribution API $path error: $e');
+    }
     return null;
   }
 
@@ -220,18 +223,29 @@ class AttributionService {
     }
   }
 
-  void _flushAdEvents() {
+  Future<void> _flushAdEvents() async {
     _flushTimer?.cancel();
     _flushTimer = null;
 
     if (_adEventBuffer.isEmpty) return;
 
     final batch = List<_AdEvent>.from(_adEventBuffer);
-    _adEventBuffer.clear();
 
-    _post('/v1/events/ad', {
+    final result = await _post('/v1/events/ad', {
       'events': batch.map((e) => e.toJson()).toList(),
     });
+
+    // Only clear the buffer on successful flush (HTTP 200).
+    // On failure, events remain in the buffer for retry on next flush.
+    if (result != null) {
+      _adEventBuffer.removeWhere((e) => batch.contains(e));
+    } else {
+      // Re-arm timer for retry
+      _flushTimer = Timer(
+        Duration(milliseconds: AppConstants.attributionFlushIntervalMs),
+        _flushAdEvents,
+      );
+    }
   }
 
   /// Log a daily retention ping. Called once per app launch.

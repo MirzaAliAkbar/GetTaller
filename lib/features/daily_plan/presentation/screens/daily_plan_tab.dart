@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/utils/nutrition_goals.dart';
+import '../../../../core/utils/constants.dart';
+import '../../../../core/ads/ad_service.dart';
 import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../exercises/data/exercise_database.dart';
 
@@ -193,6 +195,34 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
         ],
       ),
     );
+  }
+
+  // ── Repeat Workout: rewarded-ad gate ──
+  // Each repeat attempt requires its own ad watch — no persistent unlock.
+
+  Future<void> _watchAdThenRepeat(
+    BuildContext context, WidgetRef ref, List<String> ids, int level,
+  ) async {
+    final adNotifier = ref.read(rewardedAdStateProvider.notifier);
+    final loaded = await adNotifier.load(
+        adUnitId: AppConstants.rewardedRepeatWorkoutAdUnitId);
+
+    if (!context.mounted) return;
+
+    if (!loaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ad failed to load. Please try again.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      return;
+    }
+
+    await adNotifier.show();
+
+    if (!context.mounted) return;
+    context.push('/workout', extra: {'ids': ids, 'level': level});
   }
 
   // ── Progress Header ──
@@ -427,7 +457,7 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                           Text('Repeat Level $dayNumber?', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18)),
                         ],
                       ),
-                      content: const Text('You\'ve already completed this workout. Repeating it again will re-mark it as complete.'),
+                      content: const Text('You\'ve already completed this workout. Watch a quick ad to unlock a repeat — it\'ll re-mark this level as complete.'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
@@ -436,13 +466,14 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                         ElevatedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            context.push('/workout', extra: {
-                              'ids': exercises.map((e) => e.id).toList(),
-                              'level': dayNumber,
-                            });
+                            _watchAdThenRepeat(
+                              context, ref,
+                              exercises.map((e) => e.id).toList(),
+                              dayNumber,
+                            );
                           },
-                          icon: const Icon(Icons.replay_rounded, size: 18),
-                          label: const Text('Repeat'),
+                          icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
+                          label: const Text('Watch Ad & Repeat'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.success,
                             foregroundColor: Colors.white,
@@ -718,7 +749,7 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                             Text('Repeat Level $level?', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18)),
                           ],
                         ),
-                        content: const Text('Repeating will mark it as complete again. Ready to go?'),
+                        content: const Text('Watch a quick ad to unlock a repeat. Repeating will mark it as complete again.'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dCtx),
@@ -727,13 +758,14 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                           ElevatedButton.icon(
                             onPressed: () {
                               Navigator.pop(dCtx);
-                              context.push('/workout', extra: {
-                                'ids': exercises.map((e) => e.id).toList(),
-                                'level': level,
-                              });
+                              _watchAdThenRepeat(
+                                context, ref,
+                                exercises.map((e) => e.id).toList(),
+                                level,
+                              );
                             },
-                            icon: const Icon(Icons.replay_rounded, size: 18),
-                            label: const Text('Repeat'),
+                            icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
+                            label: const Text('Watch Ad & Repeat'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.success,
                               foregroundColor: Colors.white,

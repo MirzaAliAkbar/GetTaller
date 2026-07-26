@@ -46,19 +46,18 @@ class AdService {
   void Function(double cpm)? onNativeAdImpression;
 
   // ── Affiliate attribution ──
-  String? _referralCode;
-
-  /// Load cached referral code from storage for ad attribution.
-  Future<void> initAttribution() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _referralCode = prefs.getString(AppConstants.prefReferralCode);
-    } catch (_) {}
-  }
+  // Reads referral code directly from AttributionService singleton so it
+  // always reflects the latest cached value (set during onboarding).
+  String? get _referralCode => AttributionService().referralCode;
 
   // ── Initialization ──
   Future<void> initialize() async {
     await MobileAds.instance.initialize();
+  }
+
+  /// Initialize attribution state.
+  Future<void> initAttribution() async {
+    // Currently reads directly from AttributionService()
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -285,18 +284,18 @@ class AdService {
         },
         onAdOpened: (ad) {},
         onAdClosed: (ad) {},
+        onPaidEvent: (ad, valueMicros, precision, currencyCode) {
+          if (_referralCode == null) return;
+          AttributionService().logAdRevenue(
+            valueMicros: valueMicros.toInt(),
+            adFormat: 'banner',
+            code: _referralCode!,
+            currency: currencyCode,
+            precision: precision.index,
+          );
+        },
       ),
     );
-    ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) {
-      if (_referralCode == null) return;
-      AttributionService().logAdRevenue(
-        valueMicros: valueMicros.toInt(),
-        adFormat: 'banner',
-        code: _referralCode!,
-        currency: currencyCode,
-        precision: precision.index,
-      );
-    };
     ad.load();
     return ad;
   }
@@ -327,18 +326,18 @@ class AdService {
         onAdImpression: (ad) {
           onNativeAdImpression?.call(0.0);
         },
+        onPaidEvent: (ad, valueMicros, precision, currencyCode) {
+          if (_referralCode == null) return;
+          AttributionService().logAdRevenue(
+            valueMicros: valueMicros.toInt(),
+            adFormat: 'native',
+            code: _referralCode!,
+            currency: currencyCode,
+            precision: precision.index,
+          );
+        },
       ),
     );
-    ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) {
-      if (_referralCode == null) return;
-      AttributionService().logAdRevenue(
-        valueMicros: valueMicros.toInt(),
-        adFormat: 'native',
-        code: _referralCode!,
-        currency: currencyCode,
-        precision: precision.index,
-      );
-    };
     ad.load();
     return ad;
   }
