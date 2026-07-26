@@ -59,11 +59,18 @@
       btn.textContent = 'Signing in...';
 
       try {
-        const res = await fetch('/v1/admin/login', {
+        const baseUrl = window.API_BASE || '';
+        const res = await fetch(`${baseUrl}/v1/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
         });
+
+        // If we get an HTML response (like a 404 from Cloudflare Pages), it means the API route isn't hit
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('API returned non-JSON response (check your API_BASE or routing)');
+        }
 
         const data = await res.json();
         if (!res.ok) {
@@ -77,7 +84,8 @@
         adminSetToken(data.token);
         window.location.href = '/admin/';
       } catch (e) {
-        errorMsg.textContent = 'Connection error. Please try again.';
+        console.error('Login error:', e);
+        errorMsg.textContent = 'Connection error (API unreachable). Please check your internet or API_BASE configuration.';
         errorMsg.classList.add('show');
         btn.disabled = false;
         btn.textContent = 'Sign In';

@@ -50,20 +50,25 @@ Expected output: `ad_events admin_users daily_pings payouts referral_codes sessi
 
 ## Step 4: Create Your Admin Account
 
-Run the seed command to create the initial admin user:
+Because the Worker uses a custom high-security PBKDF2 hash (not standard bcrypt), you **MUST** create your admin user using the secure seed endpoint.
 
+1. **Set a SEED_KEY secret**:
 ```bash
-npx wrangler d1 execute gettaller-affiliate \
-  --command="INSERT INTO admin_users (username, password_hash) VALUES ('admin', '\$2a\$10\$CHANGEME...');"
+wrangler secret put SEED_KEY
+```
+*(Enter a long random string when prompted)*
+
+2. **Deploy the Worker** (see Step 6).
+
+3. **Call the Seed Endpoint**:
+```bash
+curl -X POST https://YOUR_WORKER.workers.dev/v1/admin/seed \
+  -H 'Content-Type: application/json' \
+  -H 'X-Seed-Key: YOUR_SEED_KEY' \
+  -d '{"username":"admin","password":"YOUR_SECURE_PASSWORD"}'
 ```
 
-> **Important:** Generate a proper bcrypt hash on the command line first:
-> ```bash
-> node -e "console.log(require('bcryptjs').hashSync('YOUR_ADMIN_PASSWORD', 10))"
-> ```
-> Then use the output in the INSERT statement above.
-
-Alternatively, deploy the worker first and use the seed endpoint (see Step 7).
+Alternatively, if you prefer manual D1 execution, you must generate the hash using the worker's logic first.
 
 ---
 
@@ -105,20 +110,7 @@ curl https://gettaller-affiliate.YOUR_SUBDOMAIN.workers.dev/v1/validate?code=TES
 
 ---
 
-## Step 7: Seed Initial Admin (via API)
-
-If you set a `SEED_KEY` secret:
-
-```bash
-curl -X POST https://gettaller-affiliate.YOUR_SUBDOMAIN.workers.dev/v1/admin/seed \
-  -H 'Content-Type: application/json' \
-  -H 'X-Seed-Key: YOUR_SEED_KEY' \
-  -d '{"username":"admin","password":"YOUR_ADMIN_PASSWORD"}'
-```
-
----
-
-## Step 8: Create Your First Influencer
+## Step 7: Create Your First Influencer
 
 Login to the admin dashboard at `https://studios.grayonix.com/admin/login.html`
 

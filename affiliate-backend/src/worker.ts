@@ -868,23 +868,26 @@ async function handleAdminLogout(request: Request, env: Env): Promise<Response> 
 // ══════════════════════════════════════════════════════════════════
 
 async function handleSeed(request: Request, env: Env): Promise<Response> {
-  const adminKey = request.headers.get('X-Admin-Key');
-  if (adminKey !== env.ADMIN_SECRET) return error('Unauthorized', 401);
+  const adminKey = request.headers.get('X-Admin-Key') || request.headers.get('X-Seed-Key');
+  const secret = env.ADMIN_SECRET || env.SEED_KEY;
+  if (!secret || adminKey !== secret) return error('Unauthorized', 401);
 
   let body: any;
   try { body = await request.json(); } catch { return error('Invalid JSON'); }
 
   const results: string[] = [];
+  const username = body.username || body.adminUsername;
+  const password = body.password || body.adminPassword;
 
   // Create admin user if not exists
-  if (body.adminUsername && body.adminPassword) {
-    const hash = await hashPassword(body.adminPassword);
+  if (username && password) {
+    const hash = await hashPassword(password);
     try {
       await env.DB.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)')
-        .bind(body.adminUsername, hash).run();
-      results.push(`Admin user '${body.adminUsername}' created`);
-    } catch {
-      results.push('Admin user already exists');
+        .bind(username, hash).run();
+      results.push(`Admin user '${username}' created`);
+    } catch (e: any) {
+      results.push(`Failed to create admin user: ${e.message}`);
     }
   }
 
