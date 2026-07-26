@@ -35,3 +35,11 @@
 -dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
 -dontwarn com.google.android.play.core.splitinstall.**
 -dontwarn com.google.android.play.core.tasks.**
+
+# Mediation Adapters (AppLovin, Amazon, etc.)
+-dontwarn com.amazon.privacypass.**
+-dontwarn com.iab.omid.**
+-keep class com.applovin.** { *; }
+-dontwarn com.applovin.**
+-keep class com.unity3d.** { *; }
+-dontwarn com.unity3d.**
