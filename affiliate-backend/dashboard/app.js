@@ -5,7 +5,8 @@ const API_BASE = window.API_BASE || '';
 // ── Session management (cookie + localStorage backup) ──
 function getToken() {
   // Try cookie first (set by login page or server Set-Cookie)
-  const match = document.cookie.match(/session_token=([^;]+)/);
+  // Use word boundary to avoid matching inside "admin_session_token"
+  const match = document.cookie.match(/(?:^|;\s*)session_token=([^;]+)/);
   if (match && match[1]) return match[1];
   // Fallback to localStorage (survives stricter browser settings)
   try { return localStorage.getItem('session_token'); } catch { return null; }
