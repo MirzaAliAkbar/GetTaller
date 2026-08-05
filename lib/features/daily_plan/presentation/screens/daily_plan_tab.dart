@@ -219,9 +219,22 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
       return;
     }
 
-    await adNotifier.show();
+    final shown = await adNotifier.show();
 
     if (!context.mounted) return;
+
+    // Only proceed to the workout when the ad was actually watched — otherwise
+    // a failed ad would hand out the repeat for free.
+    if (!shown) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ad did not complete. Please try again.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      return;
+    }
+
     context.push('/workout', extra: {'ids': ids, 'level': level});
   }
 
@@ -516,9 +529,12 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
   Widget _buildPreviousLevels(BuildContext context, WidgetRef ref, int today, List<int> completed) {
     if (today <= 1) return const SizedBox.shrink();
 
-    // Show the latest 8 completed/available levels
-    final start = max(1, today - 8);
-    final levels = List.generate(today - 1, (i) => start + i);
+    // Show the latest 8 completed/available levels — NOT one card per previous
+    // day. (the old count of `today - 1` produced a huge unlocked-looking wall,
+    // e.g. days 20–46 when today was 28.)
+    final count = min(8, today - 1);
+    final start = today - count;
+    final levels = List.generate(count, (i) => start + i);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +566,7 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: GestureDetector(
-                  onTap: () => _showLevelDetail(context, ref, level),
+                  onTap: () => _showLevelDetail(context, ref, level, done),
                   child: Container(
                     width: 80,
                     padding: const EdgeInsets.all(10),
@@ -666,7 +682,7 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
     );
   }
 
-  void _showLevelDetail(BuildContext context, WidgetRef ref, int level) {
+  void _showLevelDetail(BuildContext context, WidgetRef ref, int level, bool done) {
     final exercises = ExerciseDatabase.getExercisesForDay(level);
     final phaseName = ExerciseDatabase.getPhaseName(level);
 
@@ -744,12 +760,18 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         title: Row(
                           children: [
-                            const Icon(Icons.replay_rounded, color: AppTheme.success, size: 24),
+                            Icon(done ? Icons.replay_rounded : Icons.play_arrow_rounded,
+                                color: done ? AppTheme.success : AppTheme.primary, size: 24),
                             const SizedBox(width: 8),
-                            Text('Repeat Level $level?', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18)),
+                            Text(
+                              done ? 'Repeat Level $level?' : 'Catch up: Level $level?',
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18),
+                            ),
                           ],
                         ),
-                        content: const Text('Watch a quick ad to unlock a repeat. Repeating will mark it as complete again.'),
+                        content: Text(done
+                            ? 'Watch a quick ad to replay this workout — it\'ll mark the level as complete again.'
+                            : 'You missed this day. Watch a quick ad to do it now — it\'ll count as complete.'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dCtx),
@@ -764,8 +786,8 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                                 level,
                               );
                             },
-                            icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
-                            label: const Text('Watch Ad & Repeat'),
+                            icon: Icon(done ? Icons.replay_rounded : Icons.play_arrow_rounded, size: 18),
+                            label: Text(done ? 'Watch Ad & Repeat' : 'Watch Ad & Start'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.success,
                               foregroundColor: Colors.white,
@@ -776,8 +798,8 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.replay_rounded, size: 20),
-                  label: const Text('Repeat Workout'),
+                  icon: Icon(done ? Icons.replay_rounded : Icons.play_arrow_rounded, size: 20),
+                  label: Text(done ? 'Repeat Workout' : 'Start Workout'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

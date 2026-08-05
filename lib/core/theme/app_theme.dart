@@ -127,6 +127,7 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.light,
     scaffoldBackgroundColor: backgroundLight,
+    visualDensity: VisualDensity.adaptivePlatformDensity,
     colorScheme: const ColorScheme.light(
       primary: primary,
       secondary: secondary,
@@ -232,6 +233,7 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: backgroundDark,
+    visualDensity: VisualDensity.adaptivePlatformDensity,
     colorScheme: const ColorScheme.dark(
       primary: primaryLight,
       secondary: secondary,

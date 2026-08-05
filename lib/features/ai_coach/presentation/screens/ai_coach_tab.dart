@@ -393,9 +393,22 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
 
       final shown = await adNotifier.show();
 
+      if (!mounted) return;
+
+      // Only grant queries when the ad was actually watched to completion.
+      // show() returns false when no ad was available, so we must not award.
+      if (!shown) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ad did not complete. Please try again.'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+        return;
+      }
+
       // The ad was shown successfully.
       // We grant queries immediately upon completion.
-
       setState(() {
         _queriesRemaining += AppConstants.rewardedVideoGrantCount;
         _showRewardedPrompt = false;
