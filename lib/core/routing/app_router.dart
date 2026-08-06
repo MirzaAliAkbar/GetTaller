@@ -24,6 +24,7 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/ar_height/presentation/screens/ar_height_measure_screen.dart';
 import '../../features/daily_plan/presentation/screens/plan_complete_screen.dart';
 import '../../features/daily_plan/presentation/screens/weekly_recap_screen.dart';
+import '../../features/premium/presentation/screens/premium_screen.dart';
 
 /// GoRouter configuration — Blueprint §1.2
 final routerProvider = Provider<GoRouter>((ref) {
@@ -145,6 +146,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/premium',
+        name: 'premium',
+        builder: (context, state) => const PremiumScreen(),
       ),
       GoRoute(
         path: '/ar-measure',

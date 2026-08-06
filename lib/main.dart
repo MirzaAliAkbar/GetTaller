@@ -11,6 +11,7 @@ import 'core/services/user_data_service.dart';
 import 'core/services/ai_service.dart';
 import 'core/services/attribution_service.dart';
 import 'core/services/remote_config_service.dart';
+import 'core/services/subscription_service.dart';
 import 'core/utils/unit_converter.dart';
 
 void main() async {
@@ -75,6 +76,11 @@ Future<void> _initBackgroundServices(NotificationService notifService) async {
   // Initialize attribution service (install ID, referral code cache)
   try {
     await AttributionService().initialize();
+  } catch (_) {}
+
+  // Initialize Play Store subscriptions — restores previous purchases
+  try {
+    await SubscriptionService().initialize();
   } catch (_) {}
 
   // Daily retention ping — only for referred users (fire-and-forget)

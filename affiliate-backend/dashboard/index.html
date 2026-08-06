@@ -78,8 +78,10 @@
             'AdMob estimated revenue')}
           ${createStatCard('Your Earnings (est.)', formatCurrency(stats.earningsEstimate),
             `${influencer.sharePercent}% of revenue`)}
-          ${createStatCard('Revenue Per User', formatCurrency(stats.revenuePerUser),
-            'Avg. across all referred users')}
+          ${createStatCard('Premium Subscribers', formatNumber(stats.premiumUsers),
+            `${stats.premiumConversionRate}% conversion rate`)}
+          ${createStatCard('Subscription Revenue', formatCurrency(stats.subscriptionRevenue),
+            'Monthly premium subscriptions')}
         </div>
 
         <p class="label-estimated" style="margin:-12px 0 20px 4px;">
@@ -116,6 +118,17 @@
             <div class="card">
               <div class="card-header">Revenue by Ad Format</div>
               <div class="revenue-breakdown" id="revenueByFormat"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">Recent Subscriptions</div>
+              ${charts.recentSubscriptions && charts.recentSubscriptions.length
+                ? `<div class="recent-signups"><table><tr><th>Date</th><th>Event</th><th>Amount</th></tr>
+                    ${charts.recentSubscriptions.map(s =>
+                      `<tr><td>${formatDate(s.created_at)}</td><td>${s.event_type}</td><td>${formatCurrency((s.amount_cents || 0) / 100)}</td></tr>`
+                    ).join('')}</table></div>`
+                : '<div class="empty-state" style="padding:30px;"><div class="icon">⭐</div>No premium subscribers yet. Share your code to grow!</div>'
+              }
             </div>
 
             <div class="card">

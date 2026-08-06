@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/user_data_service.dart';
+import '../../../../core/services/subscription_service.dart';
 import '../../../../core/utils/nutrition_goals.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/ads/ad_service.dart';
@@ -199,10 +200,17 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
 
   // ── Repeat Workout: rewarded-ad gate ──
   // Each repeat attempt requires its own ad watch — no persistent unlock.
+  // Premium users skip the ad entirely.
 
   Future<void> _watchAdThenRepeat(
     BuildContext context, WidgetRef ref, List<String> ids, int level,
   ) async {
+    // Premium users skip ads — go straight to the workout.
+    if (SubscriptionService().isPremium) {
+      context.push('/workout', extra: {'ids': ids, 'level': level});
+      return;
+    }
+
     final adNotifier = ref.read(rewardedAdStateProvider.notifier);
     final loaded = await adNotifier.load(
         adUnitId: AppConstants.rewardedRepeatWorkoutAdUnitId);

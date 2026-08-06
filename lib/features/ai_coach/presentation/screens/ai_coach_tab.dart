@@ -8,6 +8,7 @@ import '../../../../core/ads/ad_service.dart';
 import '../../../../core/services/ai_service.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/subscription_service.dart';
 import '../../../../shared/widgets/banner_ad_widget.dart';
 
 /// AI Coach tab — Blueprint §4.4
@@ -293,16 +294,20 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
 
   Future<void> _loadQueryState() async {
     final prefs = await SharedPreferences.getInstance();
+    final isPremium = SubscriptionService().isPremium;
 
-    if (!prefs.containsKey(_keyQueriesRemaining)) {
+    if (isPremium) {
+      // Premium users get 10 queries/day — reset if needed.
+      _queriesRemaining = AppConstants.premiumAiQueries;
+    } else if (!prefs.containsKey(_keyQueriesRemaining)) {
       // First launch ever — grant the one-time lifetime free queries.
       _queriesRemaining = AppConstants.initialFreeAiQueries;
-      await prefs.setInt(_keyQueriesRemaining, _queriesRemaining);
     } else {
       _queriesRemaining = prefs.getInt(_keyQueriesRemaining) ??
           AppConstants.initialFreeAiQueries;
     }
 
+    await prefs.setInt(_keyQueriesRemaining, _queriesRemaining);
     if (mounted) setState(() {});
   }
 

@@ -1,7 +1,7 @@
 name: gettaller_app
 description: "GetTaller - Your 90-Day Growth Journey. 100% free, ad-supported height optimization app."
 publish_to: 'none'
-version: 1.0.1+17
+version: 1.1.0+18
 
 environment:
   sdk: '>=3.5.4 <4.0.0'
@@ -25,6 +25,9 @@ dependencies:
   # Ads
   google_mobile_ads: ^5.3.1
   app_tracking_transparency: ^2.0.7
+
+  # Subscriptions
+  in_app_purchase: ^3.2.0
 
   # Local Storage
   shared_preferences: ^2.3.4

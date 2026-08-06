@@ -13,6 +13,7 @@ import '../../../../shared/widgets/height_growth_chart.dart';
 import '../../../../shared/widgets/notification_permission_prompt.dart';
 import '../widgets/growth_window_timer.dart';
 import '../../../daily_plan/presentation/providers/weekly_summary_providers.dart';
+import '../../../premium/presentation/widgets/premium_banner.dart';
 import 'package:in_app_review/in_app_review.dart';
 
 /// Dashboard tab — Blueprint §4.2
@@ -245,6 +246,9 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
               ),
             ],
           ),
+
+          // ── Premium Banner ──
+          const PremiumBanner(),
 
           const SizedBox(height: AppConstants.spacingLg),
 

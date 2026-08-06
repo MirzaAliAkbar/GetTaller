@@ -9,6 +9,7 @@ import '../../../../core/utils/constants.dart';
 import '../../../../core/utils/unit_converter.dart';
 import '../../../../core/services/user_data_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/subscription_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -115,6 +116,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 24),
             const Text('App', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
             const SizedBox(height: 12),
+
+            // Premium row
+            Builder(
+              builder: (context) {
+                final isPremium = SubscriptionService().isPremium;
+                return _SettingsTile(
+                  icon: Icons.workspace_premium_rounded,
+                  title: isPremium ? 'Premium Active' : 'Upgrade to Premium',
+                  subtitle: isPremium ? 'Manage your subscription' : 'No ads · Offline · 10 AI queries/day',
+                  onTap: () => context.push('/premium'),
+                );
+              },
+            ),
 
             _NotificationTile(),
             _SettingsTile(

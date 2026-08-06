@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/constants.dart';
+import '../../core/services/subscription_service.dart';
 
 /// Blocks the whole app behind a full-screen "No Internet Connection"
 /// message whenever both wifi and mobile data are down. Ads (interstitial,
@@ -76,10 +77,12 @@ class _ConnectivityGateState extends State<ConnectivityGate> {
 
   @override
   Widget build(BuildContext context) {
+    // Premium users can use the app offline — skip the blocking screen.
+    final isPremium = SubscriptionService().isPremium;
     return Stack(
       children: [
         widget.child,
-        if (_offline) _OfflineScreen(checking: _checking, onRetry: _retry),
+        if (_offline && !isPremium) _OfflineScreen(checking: _checking, onRetry: _retry),
       ],
     );
   }

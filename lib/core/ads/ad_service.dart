@@ -6,6 +6,7 @@ import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import '../services/attribution_service.dart';
+import '../services/subscription_service.dart';
 
 /// Ad lifecycle state tracked via Riverpod
 enum AdLoadState { initial, loading, loaded, failed }
@@ -114,6 +115,8 @@ class AdService {
   // ══════════════════════════════════════════════════════════════
 
   Future<void> loadInterstitialAd({String? adUnitId}) async {
+    // Premium users never see ads.
+    if (SubscriptionService().isPremium) return;
     if (_interstitialAd != null || _isInterstitialLoading) return;
     if (_interstitialRetries >= _maxRetries) return;
 
@@ -163,6 +166,8 @@ class AdService {
   }
 
   Future<bool> showInterstitialAd() async {
+    // Premium users never see ads.
+    if (SubscriptionService().isPremium) return false;
     if (_interstitialAd == null) return false;
     _interstitialAd!.show();
     return true;
@@ -173,6 +178,8 @@ class AdService {
   // ══════════════════════════════════════════════════════════════
 
   Future<bool> loadRewardedAd({String? adUnitId}) async {
+    // Premium users never see ads.
+    if (SubscriptionService().isPremium) return false;
     final targetUnitId = adUnitId ?? AppConstants.rewardedAdUnitId;
 
     // A different ad unit is cached/loading — it can't serve this request,
@@ -245,6 +252,8 @@ class AdService {
   }
 
   Future<bool> showRewardedAd() async {
+    // Premium users never see ads.
+    if (SubscriptionService().isPremium) return false;
     if (_rewardedAd == null) return false;
 
     final completer = Completer<bool>();

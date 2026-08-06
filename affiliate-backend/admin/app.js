@@ -52,6 +52,7 @@ function createInfluencerRow(i) {
     <td>${fmtNumber(i.signups)}</td>
     <td>${fmtCurrency(i.revenueEstimate)}</td>
     <td>${fmtCurrency(i.earningsEstimate)}</td>
+    <td>${fmtNumber(i.premiumUsers || 0)}<br><span style="font-size:11px;color:var(--color-text-secondary);">${fmtCurrency(i.subscriptionRevenue || 0)}</span></td>
     <td>${i.retentionD7 != null ? i.retentionD7 + '%' : '—'}</td>
     <td>
       <span class="badge ${i.active ? 'badge-active' : 'badge-inactive'}">
@@ -102,6 +103,11 @@ function renderAdminStats(container, data) {
         <div class="stat-value">${fmtCurrency(t.revenueEstimate)}</div>
       </div>
       <div class="stat-card">
+        <div class="stat-label">Premium Subscribers</div>
+        <div class="stat-value">${fmtNumber(t.premiumUsers)}</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);">${fmtCurrency(t.subscriptionRevenue)} revenue</div>
+      </div>
+      <div class="stat-card">
         <div class="stat-label">Pending Payouts</div>
         <div class="stat-value">${fmtCurrency(t.pendingPayouts)}</div>
       </div>
@@ -128,7 +134,7 @@ function renderInfluencerTable(container, influencers) {
     </div>
     <div style="overflow-x:auto;">
       <table class="admin-table" id="influencerTable">
-        <tr><th>Name</th><th>Code</th><th>Signups</th><th>Revenue (est)</th><th>Earnings (est)</th><th>D7 Ret.</th><th>Status</th><th></th></tr>
+        <tr><th>Name</th><th>Code</th><th>Signups</th><th>Revenue (est)</th><th>Earnings (est)</th><th>Premium</th><th>D7 Ret.</th><th>Status</th><th></th></tr>
         <tbody id="tableBody">
           ${influencers.map(createInfluencerRow).join('')}
         </tbody>

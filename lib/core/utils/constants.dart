@@ -66,9 +66,14 @@ class AppConstants {
   static const int rewardedVideoGrantCount = 2;
   static const int initialFreeAiQueries = 2;
 
+  // ── Premium / Subscriptions ──
+  static const String premiumProductId = 'gettaller_premium_monthly';
+  static const int premiumAiQueries = 10;
+
   // ── Storage ──
   static const String prefOnboardingComplete = 'onboarding_complete';
   static const String prefAiQueriesRemaining = 'ai_queries_remaining';
+  static const String prefIsPremium = 'is_premium';
   static const String prefUnitSystem = 'unit_system';
   static const String prefLanguage = 'language';
   static const String prefTheme = 'theme_mode';
@@ -93,6 +98,7 @@ class AppConstants {
   static const String prefInstallId = 'install_id';
   static const String prefReferralCode = 'referral_code';
   static const String attributionBaseUrl = 'https://studios.grayonix.com';
+  static const String affiliateBackendUrl = 'https://studios.grayonix.com';
   static const int attributionFlushIntervalMs = 10000;
   static const int attributionBatchSize = 5;
 }

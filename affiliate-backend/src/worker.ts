@@ -251,6 +251,42 @@ async function handlePing(request: Request, env: Env): Promise<Response> {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// SUBSCRIPTION EVENT ROUTES
+// ══════════════════════════════════════════════════════════════════
+
+async function handleSubscriptionEvent(request: Request, env: Env): Promise<Response> {
+  let body: any;
+  try { body = await request.json(); } catch { return error('Invalid JSON'); }
+
+  const userId = body.userId || body.installId || '';
+  const eventType = body.eventType || 'purchase'; // purchase, renewal, cancel, expire
+  const productId = body.productId || '';
+  const amountCents = body.amountCents || 0;
+  const currency = body.currency || 'USD';
+  const platform = body.platform || 'android';
+  const referralCode = body.referralCode ? uc(body.referralCode) : null;
+
+  if (!userId || !productId) return error('Missing userId or productId');
+
+  // Look up influencer from referral code
+  let influencerId: string | null = null;
+  if (referralCode) {
+    const inf = await env.DB.prepare(
+      'SELECT influencer_id FROM referral_codes WHERE code = ?'
+    ).bind(referralCode).first<{ influencer_id: string }>();
+    influencerId = inf?.influencer_id ?? null;
+  }
+
+  // Insert subscription event
+  await env.DB.prepare(
+    `INSERT INTO subscription_events (user_id, influencer_id, referral_code, event_type, product_id, amount_cents, currency, platform)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(userId, influencerId, referralCode, eventType, productId, amountCents, currency, platform).run();
+
+  return json({ ok: true });
+}
+
+// ══════════════════════════════════════════════════════════════════
 // INFLUENCER DASHBOARD ROUTES
 // ══════════════════════════════════════════════════════════════════
 
@@ -341,6 +377,23 @@ async function handleInfluencerStats(request: Request, env: Env, influencerId: s
      GROUP BY ad_format`
   ).bind(influencerId).all<{ ad_format: string; micros: number; count: number }>();
 
+  // ── Premium subscription metrics ──
+  const premiumRow = await env.DB.prepare(
+    `SELECT COUNT(DISTINCT user_id) as premium_users,
+            SUM(amount_cents) as total_revenue_cents,
+            COUNT(*) as total_events
+     FROM subscription_events
+     WHERE influencer_id = ? AND event_type IN ('purchase', 'renewal')`
+  ).bind(influencerId).first<{ premium_users: number; total_revenue_cents: number; total_events: number }>();
+
+  // Recent subscription events
+  const recentSubscriptions = await env.DB.prepare(
+    `SELECT created_at, event_type, amount_cents, currency
+     FROM subscription_events
+     WHERE influencer_id = ?
+     ORDER BY created_at DESC LIMIT 10`
+  ).bind(influencerId).all<{ created_at: string; event_type: string; amount_cents: number; currency: string }>();
+
   // ── Retention curve ──
   // How many users signed up >= 1/7/30/90 days ago AND have at least that many ping dates
   // Simplified: get all signups, count distinct ping dates per user
@@ -413,12 +466,18 @@ async function handleInfluencerStats(request: Request, env: Env, influencerId: s
       adEventCount,
       earningsEstimate: Math.round(earningsEstimate * 100) / 100,
       revenuePerUser: Math.round(rpu * 100) / 100,
+      premiumUsers: premiumRow?.premium_users ?? 0,
+      subscriptionRevenue: (premiumRow?.total_revenue_cents ?? 0) / 100,
+      premiumConversionRate: totalSignups > 0
+        ? Math.round(((premiumRow?.premium_users ?? 0) / totalSignups) * 10000) / 100
+        : 0,
     },
     charts: {
       signupsByDay: signupsByDay.results || [],
       revenue30d: revenue30d.results || [],
       revenueByFormat: revenueByFormat.results || [],
       revenueByDay: revenueByDay.results || [],
+      recentSubscriptions: recentSubscriptions.results || [],
     },
     retention,
     recentSignups: recentSignups.results || [],
@@ -511,6 +570,14 @@ async function handleAdminDashboard(request: Request, env: Env): Promise<Respons
     'SELECT COALESCE(SUM(payout_micros), 0) as total FROM payouts WHERE paid = 0'
   ).first<{ total: number }>();
 
+  // Premium subscribers
+  const premiumRow = await env.DB.prepare(
+    `SELECT COUNT(DISTINCT user_id) as premium_users,
+            SUM(amount_cents) as total_revenue_cents
+     FROM subscription_events
+     WHERE event_type IN ('purchase', 'renewal')`
+  ).first<{ premium_users: number; total_revenue_cents: number }>();
+
   // Signups today
   const todayRow = await env.DB.prepare(
     "SELECT COUNT(*) as total FROM signups WHERE DATE(created_at) = DATE('now')"
@@ -536,6 +603,8 @@ async function handleAdminDashboard(request: Request, env: Env): Promise<Respons
       signupsThisMonth: monthRow?.total ?? 0,
       revenueEstimate: (revRow?.total ?? 0) / 1_000_000,
       pendingPayouts: (payoutRow?.total ?? 0) / 1_000_000,
+      premiumUsers: premiumRow?.premium_users ?? 0,
+      subscriptionRevenue: (premiumRow?.total_revenue_cents ?? 0) / 100,
     },
     charts: {
       signupsOverTime: signups30d.results || [],
@@ -548,13 +617,16 @@ async function handleAdminInfluencers(request: Request, env: Env): Promise<Respo
     `SELECT rc.code, rc.influencer_id, rc.display_name, rc.share_percent,
             rc.active, rc.total_installs, rc.created_at,
             (SELECT COUNT(*) FROM signups s WHERE s.influencer_id = rc.influencer_id) as signups,
-            (SELECT COALESCE(SUM(value_micros), 0) FROM ad_events ae WHERE ae.influencer_id = rc.influencer_id) as revenue_micros
+            (SELECT COALESCE(SUM(value_micros), 0) FROM ad_events ae WHERE ae.influencer_id = rc.influencer_id) as revenue_micros,
+            (SELECT COUNT(DISTINCT user_id) FROM subscription_events se WHERE se.influencer_id = rc.influencer_id AND se.event_type IN ('purchase', 'renewal')) as premium_users,
+            (SELECT COALESCE(SUM(amount_cents), 0) FROM subscription_events se WHERE se.influencer_id = rc.influencer_id AND se.event_type IN ('purchase', 'renewal')) as subscription_revenue_cents
      FROM referral_codes rc
      ORDER BY rc.created_at DESC`
   ).all<{
     code: string; influencer_id: string; display_name: string;
     share_percent: number; active: number; total_installs: number;
     created_at: string; signups: number; revenue_micros: number;
+    premium_users: number; subscription_revenue_cents: number;
   }>();
 
   return json({
@@ -568,6 +640,11 @@ async function handleAdminInfluencers(request: Request, env: Env): Promise<Respo
       signups: inf.signups,
       revenueEstimate: inf.revenue_micros / 1_000_000,
       earningsEstimate: (inf.revenue_micros / 1_000_000) * (inf.share_percent / 100),
+      premiumUsers: inf.premium_users ?? 0,
+      subscriptionRevenue: (inf.subscription_revenue_cents ?? 0) / 100,
+      premiumConversionRate: inf.signups > 0
+        ? Math.round(((inf.premium_users ?? 0) / inf.signups) * 10000) / 100
+        : 0,
       createdAt: inf.created_at,
     })),
   });
@@ -916,6 +993,7 @@ export default {
       if (path === '/v1/events/signup' && method === 'POST') return handleSignup(request, env);
       if (path === '/v1/events/ad' && method === 'POST') return handleAdEvents(request, env);
       if (path === '/v1/events/ping' && method === 'POST') return handlePing(request, env);
+      if (path === '/v1/events/subscription' && method === 'POST') return handleSubscriptionEvent(request, env);
 
       // ── Influencer routes ──
       if (path === '/v1/influencer/login' && method === 'POST') return handleInfluencerLogin(request, env);

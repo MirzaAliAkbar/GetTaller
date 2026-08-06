@@ -79,6 +79,24 @@ CREATE TABLE IF NOT EXISTS payouts (
 
 CREATE INDEX IF NOT EXISTS idx_payouts_influencer ON payouts(influencer_id, month);
 
+-- ── Subscription Events ──
+CREATE TABLE IF NOT EXISTS subscription_events (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id        TEXT NOT NULL,
+  influencer_id  TEXT,
+  referral_code  TEXT,
+  event_type     TEXT NOT NULL CHECK (event_type IN ('purchase', 'renewal', 'cancel', 'expire')),
+  product_id     TEXT NOT NULL,
+  amount_cents   INTEGER NOT NULL,
+  currency       TEXT NOT NULL DEFAULT 'USD',
+  platform       TEXT NOT NULL DEFAULT 'android',
+  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sub_user ON subscription_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_sub_influencer ON subscription_events(influencer_id);
+CREATE INDEX IF NOT EXISTS idx_sub_event ON subscription_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_sub_date ON subscription_events(created_at);
+
 -- ── Admin Users ──
 CREATE TABLE IF NOT EXISTS admin_users (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
