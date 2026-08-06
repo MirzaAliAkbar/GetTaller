@@ -57,6 +57,10 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.7.0')
     implementation 'com.google.firebase:firebase-analytics'
 
+    // Force Google Play Billing Library 8.0.0+ (required by Play Store from Aug 2026)
+    // Overrides the version bundled by the in_app_purchase Flutter plugin.
+    implementation 'com.android.billingclient:billing:8.0.0'
+
     // AdMob mediation adapters — resolved natively by the Google Mobile Ads SDK
     // per the mediation groups configured in the AdMob console.
     implementation 'com.google.ads.mediation:applovin:13.6.3.0'

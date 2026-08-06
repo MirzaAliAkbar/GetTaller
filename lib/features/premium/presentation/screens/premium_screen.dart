@@ -361,7 +361,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen> {
   }
 
   Future<void> _handleRestore(SubscriptionService subscription) async {
-    await subscription.restorePurchases();
+    await subscription.restorePurchaseFromUI();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

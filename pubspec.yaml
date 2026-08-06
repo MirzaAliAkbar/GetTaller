@@ -26,8 +26,11 @@ dependencies:
   google_mobile_ads: ^5.3.1
   app_tracking_transparency: ^2.0.7
 
-  # Subscriptions
-  in_app_purchase: ^3.2.0
+  # Subscriptions — use latest compatible with SDK 3.5.4
+  # in_app_purchase 3.2.3 uses Play Billing Library 7.x; 3.2.4+ needs SDK 3.10.
+  # To get Billing Library 8.0+, we need to manually override in pubspec_overrides.yaml
+  # or upgrade the Flutter SDK. For now, use latest compatible version.
+  in_app_purchase: 3.2.3
 
   # Local Storage
   shared_preferences: ^2.3.4
