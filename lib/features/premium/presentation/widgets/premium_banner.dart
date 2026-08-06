@@ -11,8 +11,9 @@ class PremiumBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final subscription = ref.watch(subscriptionServiceProvider);
-    final isPremium = subscription.isPremium;
+    // Use reactive provider — rebuilds when premium status changes.
+    final premiumAsync = ref.watch(isPremiumProvider);
+    final isPremium = premiumAsync.valueOrNull ?? false;
 
     // Already premium — hide entirely
     if (isPremium) return const SizedBox.shrink();

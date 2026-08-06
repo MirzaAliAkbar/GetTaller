@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/constants.dart';
 import '../../../../core/utils/unit_converter.dart';
 import '../../../../core/utils/height_calculator.dart';
 import '../../../../core/services/user_data_service.dart';
@@ -18,6 +17,7 @@ import 'package:in_app_review/in_app_review.dart';
 
 /// Dashboard tab — Blueprint §4.2
 /// Shows growth data, chart, streak, and quick action cards.
+/// Design: ui-ux-pro-max health/wellness style, 60/30/10 color rule.
 class DashboardTab extends ConsumerStatefulWidget {
   const DashboardTab({super.key});
 
@@ -30,7 +30,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   void initState() {
     super.initState();
     AnalyticsService().logScreenView('dashboard');
-    // Mark today visited for streak tracking + notification service
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final userDataService = ref.read(userDataServiceProvider);
       final notifService = ref.read(notificationServiceProvider);
@@ -38,30 +37,21 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       await userDataService.markTodayVisited();
       await notifService.markTodayActive();
 
-      // Check streak & fire applicable notifications
       final streak = await userDataService.getCurrentStreak();
       final completed = await userDataService.getCompletedLevels();
 
-      // Streak milestone (3, 7, 14, 21, 30, 60, 90)
       final milestones = [3, 7, 14, 21, 30, 60, 90];
       if (milestones.contains(streak)) {
         await notifService.fireStreakMilestone(streak);
-        
-        // Trigger In-App Review after a 7-day streak milestone
-        if (streak == 7) {
-          _requestAppReview();
-        }
+        if (streak == 7) _requestAppReview();
       }
 
-      // Streak at risk? If streak > 0 and no workout done today
       if (streak > 0 && completed.isEmpty) {
         await notifService.fireStreakAtRisk(streak);
       }
 
-      // Check re-engagement (7/14/30 days inactive)
       await notifService.fireReEngagement();
 
-      // Goal proximity
       final userData = await userDataService.loadUserData();
       if (userData?.targetHeightCm != null && userData != null) {
         final remaining = userData.targetHeightCm! - userData.currentHeightCm;
@@ -70,7 +60,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         }
       }
 
-      // Show notification permission prompt on first visit
       if (await notifService.shouldShowPrompt()) {
         if (!context.mounted) return;
         await showNotificationPermissionPrompt(context);
@@ -79,7 +68,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
   }
 
   Future<void> _requestAppReview() async {
-    final InAppReview inAppReview = InAppReview.instance;
+    final inAppReview = InAppReview.instance;
     try {
       if (await inAppReview.isAvailable()) {
         inAppReview.requestReview();
@@ -97,14 +86,13 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     final streakAsync = ref.watch(streakProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
         child: userDataAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('Could not load data: $err')),
           data: (userData) {
-            if (userData == null) {
-              return _buildEmptyState(context);
-            }
+            if (userData == null) return _buildEmptyState(context);
             return _buildDashboard(context, userData, canMeasureAsync, daysUntilNextAsync, streakAsync);
           },
         ),
@@ -119,17 +107,36 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.height_rounded, size: 80, color: AppTheme.accent.withOpacity(0.3)),
-            const SizedBox(height: 24),
-            const Text(
-              "Complete the onboarding\nto see your dashboard",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: AppTheme.textSecondary, height: 1.4),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.height_rounded, size: 48, color: AppTheme.primary),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => context.go('/onboarding/welcome'),
-              child: const Text('Start Assessment'),
+            Text(
+              "Complete the onboarding\nto see your dashboard",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                color: AppTheme.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => context.go('/onboarding/welcome'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('Start Assessment', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+              ),
             ),
           ],
         ),
@@ -156,142 +163,54 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     );
 
     final predictedHeight = predictionResult.peakHeight;
-
     final potentialGain = HeightCalculator.calculateHeightGain(
       currentHeightCm: userData.currentHeightCm,
       predictedHeightCm: predictedHeight,
     );
-
     final percentile = HeightCalculator.calculateAgeAdjustedPercentile(
       heightCm: userData.currentHeightCm,
       isMale: userData.isMale,
       ageYears: userData.ageYears,
     );
-
     final bmi = userData.currentWeightKg / ((userData.currentHeightCm / 100) * (userData.currentHeightCm / 100));
-
     final canMeasure = canMeasureAsync.asData?.value ?? false;
     final daysUntilNext = daysUntilNextAsync.asData?.value ?? 0;
-
-    // Weekly recap badge — appears at the start of each week and lingers until
-    // the user opens that week's recap (or the next week begins).
     final showRecapBadge = ref.watch(weeklyRecapBadgeProvider).asData?.value ?? false;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppConstants.spacingLg),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      userData.name != null && userData.name!.isNotEmpty
-                          ? 'Welcome back, ${userData.name}!'
-                          : 'Your Growth Journey',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    Text(
-                      '${userData.ageYears} yrs old • ${userData.isMale ? "Male" : "Female"} • ${predictionResult.mode.name.replaceAll(RegExp(r'(?=[A-Z])'), ' ').toUpperCase()}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              if (showRecapBadge) ...[
-                SizedBox(
-                  height: 36,
-                  child: IconButton(
-                    icon: const Badge(
-                      smallSize: 8,
-                      backgroundColor: AppTheme.energyOrange,
-                      child: Icon(Icons.insights_rounded, size: 22),
-                    ),
-                    tooltip: 'Weekly Recap',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    onPressed: () async {
-                      await markWeeklyRecapViewed();
-                      ref.invalidate(weeklyRecapBadgeProvider);
-                      if (context.mounted) context.push('/weekly-recap');
-                    },
-                  ),
-                ),
-                const SizedBox(width: 2),
-              ],
-              SizedBox(
-                height: 36,
-                child: IconButton(
-                  icon: const Icon(Icons.info_outline_rounded, size: 22),
-                  tooltip: 'Science Info',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  onPressed: () => _showScienceInfo(context),
-                ),
-              ),
-              const SizedBox(width: 2),
-              SizedBox(
-                height: 36,
-                child: IconButton(
-                  icon: const Icon(Icons.settings_outlined, size: 22),
-                  tooltip: 'Settings',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  onPressed: () => context.push('/settings'),
-                ),
-              ),
-            ],
-          ),
+          // ── Header ──
+          _buildHeader(context, userData, showRecapBadge),
+
+          const SizedBox(height: 4),
 
           // ── Premium Banner ──
           const PremiumBanner(),
 
-          const SizedBox(height: AppConstants.spacingLg),
+          const SizedBox(height: 16),
 
-          // Growth Window Timer
+          // ── Growth Window Timer ──
           GrowthWindowTimer(
             ageYears: userData.ageYears,
             birthYear: userData.birthYear,
             birthMonth: userData.birthMonth,
           ),
 
-          const SizedBox(height: AppConstants.spacingLg),
+          const SizedBox(height: 20),
 
-          // Dual Metric Cards
-          _DualMetricCards(
+          // ── Hero Metrics (Current + Peak) ──
+          _HeroMetricRow(
             currentHeight: userData.currentHeightCm,
             peakHeight: predictedHeight,
           ),
 
-          const SizedBox(height: AppConstants.spacingLg),
+          const SizedBox(height: 20),
 
-          // Growth chart
-          _SectionHeader(
-            title: 'Growth Projection',
-            action: 'View History',
-            onTap: () => _showMeasurementHistory(context, userData),
-          ),
-          const SizedBox(height: AppConstants.spacingSm),
-          Container(
-            height: 220,
-            padding: const EdgeInsets.all(AppConstants.spacingLg),
-            decoration: _cardDecoration(context),
-            child: HeightGrowthChart(
-              currentHeight: userData.currentHeightCm,
-              predictedHeight: predictedHeight,
-              ageYears: userData.ageYears,
-              isMale: userData.isMale,
-            ),
-          ),
-
-          const SizedBox(height: AppConstants.spacingLg),
-
-          // Height measurement card
-          _HeightMeasureCard(
+          // ── Height Card ──
+          _HeightCard(
             currentHeightCm: userData.currentHeightCm,
             canMeasure: canMeasure,
             daysUntilNext: daysUntilNext,
@@ -302,79 +221,153 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             ageYears: userData.ageYears,
           ),
 
-          const SizedBox(height: AppConstants.spacingLg),
+          const SizedBox(height: 20),
 
-          // Stats row
-          Row(
-            children: [
-              Expanded(
-                child: _StatTile(
-                  label: 'Potential Gain',
-                  value: '+${UnitConverter.formatHeight(potentialGain)}',
-                  icon: Icons.trending_up_rounded,
-                  color: AppTheme.accent,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatTile(
-                  label: 'Percentile',
-                  value: '${(percentile * 100).toStringAsFixed(0)}th',
-                  icon: Icons.leaderboard_rounded,
-                  color: AppTheme.info,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatTile(
-                  label: 'BMI',
-                  value: bmi.toStringAsFixed(1),
-                  icon: Icons.monitor_weight_rounded,
-                  color: AppTheme.success,
-                ),
-              ),
-            ],
+          // ── Growth Chart ──
+          _buildChartSection(context, userData, predictedHeight),
+
+          const SizedBox(height: 20),
+
+          // ── Stats Row ──
+          _StatsRow(
+            potentialGain: potentialGain,
+            percentile: percentile,
+            bmi: bmi,
           ),
 
-          const SizedBox(height: AppConstants.spacingXl),
+          const SizedBox(height: 24),
 
-          // Quick Actions
-          _SectionHeader(title: 'Quick Actions', action: null),
-          const SizedBox(height: AppConstants.spacingSm),
-          Row(
-            children: [
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.restaurant_rounded,
-                  label: 'Nutrition Tips',
-                  color: AppTheme.energyOrange,
-                  onTap: () => context.push('/education'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.bedtime_rounded,
-                  label: 'Sleep Guide',
-                  color: AppTheme.sleepIndigo,
-                  onTap: () => context.push('/education'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickActionCard(
-                  icon: Icons.fitness_center_rounded,
-                  label: 'Exercises',
-                  color: AppTheme.accent,
-                  onTap: () => context.push('/main', extra: 1),
-                ),
-              ),
-            ],
+          // ── Quick Actions ──
+          _QuickActionsSection(
+            onNutrition: () => context.push('/education'),
+            onSleep: () => context.push('/education'),
+            onExercises: () => context.push('/main', extra: 1),
           ),
 
-          const SizedBox(height: AppConstants.spacingXxl),
+          const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, PersistedUserData userData, bool showRecapBadge) {
+    final greeting = _getGreeting();
+    final name = (userData.name != null && userData.name!.isNotEmpty) ? userData.name! : '';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          // Greeting + name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name.isNotEmpty ? '$greeting, $name!' : 'Your Growth Journey',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${userData.ageYears} yrs • ${userData.isMale ? "Male" : "Female"}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Action buttons — clean, minimal
+          if (showRecapBadge)
+            _HeaderIconButton(
+              icon: Icons.insights_rounded,
+              badge: true,
+              tooltip: 'Weekly Recap',
+              onTap: () async {
+                await markWeeklyRecapViewed();
+                ref.invalidate(weeklyRecapBadgeProvider);
+                if (context.mounted) context.push('/weekly-recap');
+              },
+            ),
+          _HeaderIconButton(
+            icon: Icons.info_outline_rounded,
+            tooltip: 'Science Info',
+            onTap: () => _showScienceInfo(context),
+          ),
+          _HeaderIconButton(
+            icon: Icons.settings_outlined,
+            tooltip: 'Settings',
+            onTap: () => context.push('/settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  Widget _buildChartSection(BuildContext context, PersistedUserData userData, double predictedHeight) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Growth Projection',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showMeasurementHistory(context, userData),
+              child: Text(
+                'View History',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          height: 200,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: HeightGrowthChart(
+            currentHeight: userData.currentHeightCm,
+            predictedHeight: predictedHeight,
+            ageYears: userData.ageYears,
+            isMale: userData.isMale,
+          ),
+        ),
+      ],
     );
   }
 
@@ -382,35 +375,30 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Scientific Methodology'),
-        content: const SingleChildScrollView(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Scientific Methodology', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'GetTaller uses a multi-stage calculation engine based on established growth models:',
-                style: TextStyle(fontSize: 14),
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, height: 1.5),
               ),
-              SizedBox(height: 12),
-              Text(
-                '• Mid-Parental Height (Tanner): Predicts genetic target height using parental measurements.',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8),
-              Text(
-                '• Khamis-Roche Model: Factors in current height and weight momentum for teens.',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8),
-              Text(
-                '• Environmental Optimization: Models the impact of HGH release during deep sleep, nutritional availability, and spinal decompression.',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
+              _ScienceItem('Mid-Parental Height (Tanner)', 'Predicts genetic target height using parental measurements.'),
+              _ScienceItem('Khamis-Roche Model', 'Factors in current height and weight momentum for teens.'),
+              _ScienceItem('Environmental Optimization', 'Models the impact of HGH release during deep sleep, nutritional availability, and spinal decompression.'),
+              const SizedBox(height: 12),
               Text(
                 'Note: All predictions include a motivational adjustment and assume strict adherence to the 90-day plan.',
-                style: TextStyle(fontSize: 12, color: AppTheme.textTertiary, fontStyle: FontStyle.italic),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: AppTheme.textTertiary,
+                  fontStyle: FontStyle.italic,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -418,7 +406,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('I Understand'),
+            child: Text('I Understand', style: GoogleFonts.plusJakartaSans(color: AppTheme.primary)),
           ),
         ],
       ),
@@ -439,18 +427,16 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
+            left: 24, right: 24, top: 24,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Log Your Height',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Container(
@@ -467,20 +453,14 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Bone remodeling cycles suggest measuring every 30 days '
-                        'for accurate tracking. Consistent monthly measurements '
-                        'help identify your true growth trend.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                          height: 1.4,
-                        ),
+                        'Bone remodeling cycles suggest measuring every 30 days for accurate tracking.',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               TextField(
                 controller: heightController,
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -489,10 +469,10 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                   suffixText: UnitConverter.heightUnit(),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: () async {
                     final value = double.tryParse(heightController.text);
@@ -506,19 +486,21 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                     final service = ref.read(userDataServiceProvider);
                     await service.addHeightMeasurement(cmValue);
                     await service.updateCurrentHeight(cmValue);
-
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
-                    setState(() {}); // Refresh
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('✅ Height logged! Check back in 30 days.'),
-                        backgroundColor: AppTheme.accent,
-                      ),
-                    );
+                    setState(() {});
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('✅ Height logged! Check back in 30 days.')),
+                      );
+                    }
                   },
-                  child: const Text('Save Measurement'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Save Measurement', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -549,9 +531,9 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Height History',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w700),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -566,17 +548,16 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                       error: (e, _) => Center(child: Text('Error: $e')),
                       data: (measurements) {
                         if (measurements.isEmpty) {
-                          return const Center(child: Text('No measurements recorded yet'));
+                          return Center(
+                            child: Text('No measurements recorded yet', style: GoogleFonts.plusJakartaSans(color: AppTheme.textTertiary)),
+                          );
                         }
                         return ListView.builder(
                           controller: scrollController,
                           itemCount: measurements.length,
                           itemBuilder: (_, i) {
-                            final m = measurements[measurements.length - 1 - i]; // newest first
-                            final months = [
-                              'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-                            ];
+                            final m = measurements[measurements.length - 1 - i];
+                            final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                             final label = '${months[m.date.month - 1]} ${m.date.day}, ${m.date.year}';
                             final change = i == 0
                                 ? null
@@ -592,17 +573,17 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.height_rounded, color: AppTheme.accent, size: 22),
+                                  const Icon(Icons.height_rounded, color: AppTheme.primary, size: 22),
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${UnitConverter.formatHeight(m.heightCm)}',
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                                          UnitConverter.formatHeight(m.heightCm),
+                                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 16),
                                         ),
-                                        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
+                                        Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textTertiary)),
                                       ],
                                     ),
                                   ),
@@ -611,16 +592,16 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: change > 0
-                                            ? AppTheme.accent.withOpacity(0.1)
+                                            ? AppTheme.success.withOpacity(0.1)
                                             : AppTheme.error.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         '${change > 0 ? "+" : ""}${change.toStringAsFixed(1)}',
-                                        style: TextStyle(
+                                        style: GoogleFonts.plusJakartaSans(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: change > 0 ? AppTheme.accent : AppTheme.error,
+                                          color: change > 0 ? AppTheme.success : AppTheme.error,
                                         ),
                                       ),
                                     ),
@@ -641,87 +622,104 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
       },
     );
   }
+}
 
-  BoxDecoration _cardDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BoxDecoration(
-      color: isDark ? AppTheme.surfaceDark : Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
+// ── Clean Header Icon Button ──
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool badge;
+
+  const _HeaderIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.badge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: IconButton(
+          icon: badge
+              ? Badge(
+                  smallSize: 7,
+                  backgroundColor: AppTheme.energyOrange,
+                  child: Icon(icon, size: 21, color: AppTheme.textSecondary),
+                )
+              : Icon(icon, size: 21, color: AppTheme.textSecondary),
+          tooltip: tooltip,
+          padding: EdgeInsets.zero,
+          onPressed: onTap,
         ),
-      ],
+      ),
     );
   }
 }
 
-class _DualMetricCards extends StatelessWidget {
+// ── Hero Metric Row (Current + Peak Potential) ──
+class _HeroMetricRow extends StatelessWidget {
   final double currentHeight;
   final double peakHeight;
 
-  const _DualMetricCards({
-    required this.currentHeight,
-    required this.peakHeight,
-  });
-
-  Future<void> _requestAppReview() async {
-    final InAppReview inAppReview = InAppReview.instance;
-    try {
-      if (await inAppReview.isAvailable()) {
-        inAppReview.requestReview();
-      }
-    } catch (e) {
-      debugPrint('Error requesting review: $e');
-    }
-  }
+  const _HeroMetricRow({required this.currentHeight, required this.peakHeight});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Current height — light card
         Expanded(
           child: Container(
-            padding: const EdgeInsets.all(AppConstants.spacingLg),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.accent.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.accent.withOpacity(0.12)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'CURRENT',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    color: AppTheme.accent.withOpacity(0.6),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: AppTheme.textTertiary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
                       UnitConverter.formatHeight(currentHeight).split(' ').first,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.accent,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       UnitConverter.heightUnit(),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.accent.withOpacity(0.5),
+                        color: AppTheme.textTertiary,
                       ),
                     ),
                   ],
@@ -731,21 +729,22 @@ class _DualMetricCards extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
+        // Peak potential — gradient accent card
         Expanded(
           child: Container(
-            padding: const EdgeInsets.all(AppConstants.spacingLg),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.accent, AppTheme.accentDark],
+                colors: [AppTheme.primary, AppTheme.primaryLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.accent.withOpacity(0.25),
+                  color: AppTheme.primary.withOpacity(0.2),
                   blurRadius: 16,
-                  offset: const Offset(0, 8),
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
@@ -754,31 +753,31 @@ class _DualMetricCards extends StatelessWidget {
               children: [
                 Text(
                   'PEAK POTENTIAL',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
                     color: Colors.white.withOpacity(0.7),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
                       UnitConverter.formatHeight(peakHeight).split(' ').first,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 28,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       UnitConverter.heightUnit(),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.white.withOpacity(0.6),
                       ),
@@ -794,7 +793,8 @@ class _DualMetricCards extends StatelessWidget {
   }
 }
 
-class _HeightMeasureCard extends StatelessWidget {
+// ── Height Card ──
+class _HeightCard extends StatelessWidget {
   final double currentHeightCm;
   final bool canMeasure;
   final int daysUntilNext;
@@ -804,7 +804,7 @@ class _HeightMeasureCard extends StatelessWidget {
   final double percentile;
   final int ageYears;
 
-  const _HeightMeasureCard({
+  const _HeightCard({
     required this.currentHeightCm,
     required this.canMeasure,
     required this.daysUntilNext,
@@ -815,25 +815,20 @@ class _HeightMeasureCard extends StatelessWidget {
     required this.ageYears,
   });
 
-  Future<void> _requestAppReview() async {
-    final InAppReview inAppReview = InAppReview.instance;
-    try {
-      if (await inAppReview.isAvailable()) {
-        inAppReview.requestReview();
-      }
-    } catch (e) {
-      debugPrint('Error requesting review: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppConstants.spacingLg),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.sleepIndigo.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.sleepIndigo.withOpacity(0.1)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -841,55 +836,58 @@ class _HeightMeasureCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: (canMeasure ? AppTheme.accent : AppTheme.textTertiary).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  color: (canMeasure ? AppTheme.primary : AppTheme.textTertiary).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.height_rounded,
-                  color: canMeasure ? AppTheme.accent : AppTheme.textTertiary,
-                  size: 28,
+                  color: canMeasure ? AppTheme.primary : AppTheme.textTertiary,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${UnitConverter.formatHeight(currentHeightCm)}',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                      UnitConverter.formatHeight(currentHeightCm),
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 20),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       ageYears >= 21
                           ? 'Taller than ${(percentile * 100).toStringAsFixed(0)}% of the world'
                           : 'Taller than ${(percentile * 100).toStringAsFixed(0)}% of people your age',
-                      style: TextStyle(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.accent.withOpacity(0.8),
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primary.withOpacity(0.7),
                       ),
                     ),
                   ],
                 ),
               ),
               if (canMeasure)
-                Container(
+                SizedBox(
                   height: 36,
                   child: ElevatedButton(
                     onPressed: onMeasure,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      textStyle: const TextStyle(fontSize: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     child: const Text('Log'),
                   ),
                 ),
               IconButton(
-                icon: const Icon(Icons.history_rounded, size: 22),
+                icon: const Icon(Icons.history_rounded, size: 20),
                 color: AppTheme.textTertiary,
                 onPressed: onHistory,
                 tooltip: 'View history',
@@ -897,78 +895,59 @@ class _HeightMeasureCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // Percentile Bar
-          Container(
-            height: 6,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppTheme.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: percentile.clamp(0.01, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
+          // Percentile bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: percentile.clamp(0.01, 1.0),
+              backgroundColor: AppTheme.primary.withOpacity(0.08),
+              valueColor: AlwaysStoppedAnimation(AppTheme.primary.withOpacity(0.5)),
+              minHeight: 5,
             ),
           ),
-          const SizedBox(height: 12),
+          // Countdown when not measurable
           if (!canMeasure) ...[
-            const SizedBox(height: 16),
-            // Circular countdown
+            const SizedBox(height: 14),
             Row(
               children: [
                 SizedBox(
-                  width: 56, height: 56,
+                  width: 48, height: 48,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
-                        width: 48, height: 48,
+                        width: 42, height: 42,
                         child: CircularProgressIndicator(
                           value: 1 - (daysUntilNext / 30),
-                          backgroundColor: AppTheme.sleepIndigo.withOpacity(0.1),
-                          valueColor: const AlwaysStoppedAnimation(AppTheme.sleepIndigo),
-                          strokeWidth: 4,
+                          backgroundColor: AppTheme.primary.withOpacity(0.08),
+                          valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                          strokeWidth: 3.5,
                         ),
                       ),
                       Text(
                         '$daysUntilNext',
-                        style: const TextStyle(
-                          fontSize: 14,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.sleepIndigo,
+                          color: AppTheme.primary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Waiting for bone remodeling cycle',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
-                        ),
+                        'Waiting for bone remodeling',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Measuring every 30 days gives reliable data. '
-                        'Your target: ${UnitConverter.formatHeight(predictedHeight)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textTertiary,
-                          height: 1.4,
-                        ),
+                        'Target: ${UnitConverter.formatHeight(predictedHeight)}',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textTertiary),
                       ),
                     ],
                   ),
@@ -982,39 +961,38 @@ class _HeightMeasureCard extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? action;
-  final VoidCallback? onTap;
+// ── Stats Row ──
+class _StatsRow extends StatelessWidget {
+  final double potentialGain;
+  final double percentile;
+  final double bmi;
 
-  const _SectionHeader({required this.title, this.action, this.onTap});
-
-  Future<void> _requestAppReview() async {
-    final InAppReview inAppReview = InAppReview.instance;
-    try {
-      if (await inAppReview.isAvailable()) {
-        inAppReview.requestReview();
-      }
-    } catch (e) {
-      debugPrint('Error requesting review: $e');
-    }
-  }
+  const _StatsRow({required this.potentialGain, required this.percentile, required this.bmi});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        if (action != null)
-          GestureDetector(
-            onTap: onTap,
-            child: Text(action!,
-                style: const TextStyle(
-                    color: AppTheme.accent,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13)),
-          ),
+        _StatTile(
+          label: 'Potential Gain',
+          value: '+${UnitConverter.formatHeight(potentialGain)}',
+          icon: Icons.trending_up_rounded,
+          color: AppTheme.primary,
+        ),
+        const SizedBox(width: 10),
+        _StatTile(
+          label: 'Percentile',
+          value: '${(percentile * 100).toStringAsFixed(0)}th',
+          icon: Icons.leaderboard_rounded,
+          color: AppTheme.info,
+        ),
+        const SizedBox(width: 10),
+        _StatTile(
+          label: 'BMI',
+          value: bmi.toStringAsFixed(1),
+          icon: Icons.monitor_weight_rounded,
+          color: AppTheme.success,
+        ),
       ],
     );
   }
@@ -1025,48 +1003,97 @@ class _StatTile extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _StatTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  Future<void> _requestAppReview() async {
-    final InAppReview inAppReview = InAppReview.instance;
-    try {
-      if (await inAppReview.isAvailable()) {
-        inAppReview.requestReview();
-      }
-    } catch (e) {
-      debugPrint('Error requesting review: $e');
-    }
-  }
+  const _StatTile({required this.label, required this.value, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.12)),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textTertiary, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(value,
-              style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: color)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 11, color: AppTheme.textTertiary)),
-        ],
-      ),
+    );
+  }
+}
+
+// ── Quick Actions ──
+class _QuickActionsSection extends StatelessWidget {
+  final VoidCallback onNutrition;
+  final VoidCallback onSleep;
+  final VoidCallback onExercises;
+
+  const _QuickActionsSection({required this.onNutrition, required this.onSleep, required this.onExercises});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.restaurant_rounded,
+                label: 'Nutrition',
+                color: AppTheme.energyOrange,
+                onTap: onNutrition,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.bedtime_rounded,
+                label: 'Sleep',
+                color: AppTheme.sleepIndigo,
+                onTap: onSleep,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _QuickActionCard(
+                icon: Icons.fitness_center_rounded,
+                label: 'Exercises',
+                color: AppTheme.primary,
+                onTap: onExercises,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1077,44 +1104,44 @@ class _QuickActionCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _QuickActionCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  Future<void> _requestAppReview() async {
-    final InAppReview inAppReview = InAppReview.instance;
-    try {
-      if (await inAppReview.isAvailable()) {
-        inAppReview.requestReview();
-      }
-    } catch (e) {
-      debugPrint('Error requesting review: $e');
-    }
-  }
+  const _QuickActionCard({required this.icon, required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.12)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
             const SizedBox(height: 8),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: color)),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+            ),
           ],
         ),
       ),
@@ -1122,3 +1149,34 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
+// ── Science Info Item ──
+class _ScienceItem extends StatelessWidget {
+  final String title;
+  final String description;
+
+  const _ScienceItem(this.title, this.description);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• $title',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              description,
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -467,6 +467,14 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
             child: ElevatedButton.icon(
               onPressed: () {
                 if (isCompleted) {
+                  // Premium users skip ad dialog — go straight to workout
+                  if (SubscriptionService().isPremium) {
+                    context.push('/workout', extra: {
+                      'ids': exercises.map((e) => e.id).toList(),
+                      'level': dayNumber,
+                    });
+                    return;
+                  }
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -829,6 +837,14 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
+                    // Premium users skip ad — go straight to workout
+                    if (SubscriptionService().isPremium) {
+                      context.push('/workout', extra: {
+                        'ids': exercises.map((e) => e.id).toList(),
+                        'level': level,
+                      });
+                      return;
+                    }
                     showDialog(
                       context: context,
                       builder: (dCtx) => AlertDialog(

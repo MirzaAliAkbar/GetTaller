@@ -24,6 +24,10 @@ class SubscriptionService {
   bool _isStoreAvailable = false;
   bool _isInitialized = false;
 
+  /// Reactive premium status — widgets should listen to this for rebuilds.
+  final StreamController<bool> _premiumController = StreamController<bool>.broadcast();
+  Stream<bool> get premiumStream => _premiumController.stream;
+
   /// Whether the user currently has an active premium subscription.
   bool get isPremium => _isPremium;
 
@@ -197,6 +201,7 @@ class SubscriptionService {
 
   Future<void> _setPremium(bool value) async {
     _isPremium = value;
+    _premiumController.add(value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConstants.prefIsPremium, value);
     debugPrint('[Subscription] Premium status: $value');
@@ -205,6 +210,7 @@ class SubscriptionService {
   Future<void> _loadCachedPremiumStatus() async {
     final prefs = await SharedPreferences.getInstance();
     _isPremium = prefs.getBool(AppConstants.prefIsPremium) ?? false;
+    _premiumController.add(_isPremium);
   }
 }
 
@@ -217,12 +223,10 @@ final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
   return service;
 });
 
-/// Async premium status — resolves after initialization.
-final isPremiumProvider = FutureProvider<bool>((ref) async {
+/// Reactive premium status — rebuilds widgets when premium changes.
+final isPremiumProvider = StreamProvider<bool>((ref) {
   final service = ref.watch(subscriptionServiceProvider);
-  // Give the service a moment to initialize and restore purchases.
-  // In practice, initialize() should be called before this is read.
-  return service.isPremium;
+  return service.premiumStream;
 });
 
 /// Synchronous premium check — reads the cached value.
