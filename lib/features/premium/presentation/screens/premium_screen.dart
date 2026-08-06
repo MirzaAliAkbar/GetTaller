@@ -4,15 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/subscription_service.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// Premium subscription screen — clean, conversion-focused design.
-///
-/// Design System (ui-ux-pro-max):
-/// - Pattern: SaaS Mobile Premium
-/// - Style: Clean, minimal, health/wellness
-/// - Colors: Primary purple, wellness green accent, clean white
-/// - Typography: Plus Jakarta Sans (clean, modern)
-/// - Effects: Subtle shadows, spring animations
-/// - Touch: All targets ≥44px, clear visual hierarchy
+/// Premium subscription screen — clear value proposition.
 class PremiumScreen extends ConsumerStatefulWidget {
   const PremiumScreen({super.key});
 
@@ -20,25 +12,8 @@ class PremiumScreen extends ConsumerStatefulWidget {
   ConsumerState<PremiumScreen> createState() => _PremiumScreenState();
 }
 
-class _PremiumScreenState extends ConsumerState<PremiumScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+class _PremiumScreenState extends ConsumerState<PremiumScreen> {
   bool _isSubscribing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +22,11 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
     final price = subscription.priceString;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            // ── Close button ──
+            // Close button
             Align(
               alignment: Alignment.topRight,
               child: Padding(
@@ -67,117 +42,117 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
               ),
             ),
 
-            // ── Content ──
+            // Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: FadeTransition(
-                  opacity: _animController,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.05),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _animController,
-                      curve: Curves.easeOut,
-                    )),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 8),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
 
-                        // ── Premium icon ──
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.workspace_premium_rounded,
-                            color: AppTheme.primary,
-                            size: 48,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // ── Title ──
-                        Text(
-                          'Go Premium',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Remove limits. Focus on growth.',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 15,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ── Benefits ──
-                        _buildBenefit(
-                          icon: Icons.block_rounded,
-                          title: 'Ad-Free Experience',
-                          description: 'No banners, no interruptions',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildBenefit(
-                          icon: Icons.wifi_off_rounded,
-                          title: 'Offline Access',
-                          description: 'Workouts & plans without internet',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildBenefit(
-                          icon: Icons.chat_rounded,
-                          title: '10 AI Queries Daily',
-                          description: '5x more coaching than free',
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ── Price ──
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.06),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline_rounded,
-                                color: AppTheme.primary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$price / month',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 48),
-                      ],
+                    // Premium icon
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.workspace_premium_rounded,
+                        color: AppTheme.primary,
+                        size: 40,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    Text(
+                      'GetTaller Premium',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Everything you need, without limits.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Benefits - comparison style
+                    _buildComparisonRow(
+                      icon: Icons.block_rounded,
+                      title: 'Ad-Free Experience',
+                      free: 'With ads',
+                      premium: 'No ads',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildComparisonRow(
+                      icon: Icons.chat_rounded,
+                      title: 'AI Coach Queries',
+                      free: '2 per day',
+                      premium: '10 per day',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildComparisonRow(
+                      icon: Icons.wifi_off_rounded,
+                      title: 'Offline Mode',
+                      free: 'Requires internet',
+                      premium: 'Works offline',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildComparisonRow(
+                      icon: Icons.repeat_rounded,
+                      title: 'Repeat Workouts',
+                      free: 'Watch ad each time',
+                      premium: 'Unlimited repeats',
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Price
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primary.withOpacity(0.1),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '$price / month',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Cancel anytime. No commitment.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
 
-            // ── CTA Section (Thumb Zone) ──
+            // CTA Section
             _buildCTASection(subscription, isPremium, price),
           ],
         ),
@@ -185,43 +160,66 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
     );
   }
 
-  Widget _buildBenefit({
+  Widget _buildComparisonRow({
     required IconData icon,
     required String title,
-    required String description,
+    required String free,
+    required String premium,
   }) {
     return Row(
       children: [
+        // Icon
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10),
+            color: AppTheme.primary.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: AppTheme.primary, size: 22),
+          child: Icon(icon, color: AppTheme.primary, size: 18),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
+        // Title
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                description,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ],
+          child: Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        // Free vs Premium
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            free,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: Colors.red.shade400,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Icon(Icons.arrow_forward_rounded, color: AppTheme.textTertiary, size: 14),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.success.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            premium,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.success,
+            ),
           ),
         ),
       ],
@@ -249,12 +247,12 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isPremium) ...[
-            // Premium active state
+            // Premium active
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
+                color: AppTheme.success.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: AppTheme.success.withOpacity(0.2),
@@ -263,11 +261,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.check_circle_rounded,
-                    color: AppTheme.success,
-                    size: 20,
-                  ),
+                  Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Premium Active',
@@ -286,15 +280,12 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _isSubscribing
-                    ? null
-                    : () => _handleSubscribe(subscription),
+                onPressed: _isSubscribing ? null : () => _handleSubscribe(subscription),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: AppTheme.primary.withOpacity(0.5),
                   elevation: 0,
-                  shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -317,15 +308,12 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                       ),
               ),
             ),
-            const SizedBox(height: 10),
-            // Restore purchase (separate, subtle)
+            const SizedBox(height: 8),
+            // Restore
             TextButton(
               onPressed: () => _handleRestore(subscription),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
@@ -360,12 +348,11 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
               ),
               backgroundColor: AppTheme.success,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               duration: const Duration(seconds: 2),
             ),
           );
+          Navigator.of(context).pop();
         }
       }
     } catch (e) {
@@ -384,12 +371,9 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                 : 'No active subscription found.',
             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
           ),
-          backgroundColor:
-              subscription.isPremium ? AppTheme.success : AppTheme.warning,
+          backgroundColor: subscription.isPremium ? AppTheme.success : AppTheme.warning,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }

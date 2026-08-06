@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/utils/constants.dart';
+import '../../core/services/subscription_service.dart';
 
 /// Anchored Banner Ad widget — Blueprint §4.3
 /// Thread-safe wrapper with lifecycle management.
+/// Premium users see no banner — returns empty SizedBox.
 class BannerAdWidget extends StatefulWidget {
   final String? adUnitId;
 
@@ -20,7 +22,10 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   @override
   void initState() {
     super.initState();
-    _loadAd();
+    // Premium users never see ads.
+    if (!SubscriptionService().isPremium) {
+      _loadAd();
+    }
   }
 
   void _loadAd() {
@@ -48,6 +53,11 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Premium users never see ads.
+    if (SubscriptionService().isPremium) {
+      return const SizedBox.shrink();
+    }
+
     if (_bannerAd == null || !_isLoaded) {
       return const SizedBox(height: 50);
     }
