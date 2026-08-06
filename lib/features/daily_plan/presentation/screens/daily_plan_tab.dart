@@ -478,11 +478,78 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                           Text('Repeat Level $dayNumber?', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18)),
                         ],
                       ),
-                      content: const Text('You\'ve already completed this workout. Watch a quick ad to unlock a repeat — it\'ll re-mark this level as complete.'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Watch a quick ad to unlock a repeat — it\'ll re-mark this level as complete.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Go Premium option
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              context.push('/premium');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withOpacity(0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppTheme.primary.withOpacity(0.15),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.workspace_premium_rounded,
+                                    color: AppTheme.primary,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Go Premium',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.primary,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Repeat workouts without ads',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            color: AppTheme.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: AppTheme.primary,
+                                    size: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancel', style: TextStyle(color: AppTheme.textTertiary)),
+                          child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: AppTheme.textTertiary)),
                         ),
                         ElevatedButton.icon(
                           onPressed: () {
@@ -494,11 +561,11 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                             );
                           },
                           icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
-                          label: const Text('Watch Ad & Repeat'),
+                          label: Text('Watch Ad', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.success,
+                            backgroundColor: AppTheme.primary,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
                       ],
@@ -777,13 +844,80 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                             ),
                           ],
                         ),
-                        content: Text(done
-                            ? 'Watch a quick ad to replay this workout — it\'ll mark the level as complete again.'
-                            : 'You missed this day. Watch a quick ad to do it now — it\'ll count as complete.'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              done
+                                  ? 'Watch a quick ad to replay this workout — it\'ll mark the level as complete again.'
+                                  : 'You missed this day. Watch a quick ad to do it now — it\'ll count as complete.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Go Premium option
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(dCtx);
+                                context.push('/premium');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: AppTheme.primary.withOpacity(0.15),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.workspace_premium_rounded,
+                                      color: AppTheme.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Go Premium',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.primary,
+                                            ),
+                                          ),
+                                          Text(
+                                            'No ads, repeat freely',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 11,
+                                              color: AppTheme.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: AppTheme.primary,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dCtx),
-                            child: const Text('Cancel', style: TextStyle(color: AppTheme.textTertiary)),
+                            child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: AppTheme.textTertiary)),
                           ),
                           ElevatedButton.icon(
                             onPressed: () {
@@ -795,11 +929,11 @@ class _ExercisesTabState extends ConsumerState<_ExercisesTab> {
                               );
                             },
                             icon: Icon(done ? Icons.replay_rounded : Icons.play_arrow_rounded, size: 18),
-                            label: Text(done ? 'Watch Ad & Repeat' : 'Watch Ad & Start'),
+                            label: Text(done ? 'Watch Ad & Repeat' : 'Watch Ad & Start', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.success,
+                              backgroundColor: AppTheme.primary,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                         ],

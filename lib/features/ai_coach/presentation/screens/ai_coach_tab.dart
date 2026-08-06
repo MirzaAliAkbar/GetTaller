@@ -548,58 +548,120 @@ class _AiCoachTabState extends ConsumerState<AiCoachTab> {
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [AppTheme.accent, AppTheme.accentDark]),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.accent.withOpacity(0.3),
+                      color: Colors.black.withOpacity(0.08),
                       blurRadius: 20,
-                      offset: const Offset(0, 6),
+                      offset: const Offset(0, 4),
                     )
                   ],
                 ),
-                child: Column(children: [
-                  const Icon(Icons.play_circle_fill_rounded,
-                      size: 40, color: Colors.white),
-                  const SizedBox(height: 8),
-                  const Text('Out of queries! 🎯',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Watch a quick video to unlock '
-                    '+${AppConstants.rewardedVideoGrantCount} queries',
-                    style: TextStyle(
+                child: Column(
+                  children: [
+                    // Icon
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.play_circle_fill_rounded,
+                        size: 32,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Title
+                    Text(
+                      'No queries left',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Watch a short ad to unlock +${AppConstants.rewardedVideoGrantCount} more',
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.8)),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
+                        color: AppTheme.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    // Watch ad button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton.icon(
                         onPressed: _watchAdForQueries,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.accentDark,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                        label: Text(
+                          'Watch Ad',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        child: Text(
-                            'Watch Ad (Grant +${AppConstants.rewardedVideoGrantCount}) 🎬'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      TextButton(
-                        onPressed: () => setState(
-                            () => _showRewardedPrompt = false),
-                        child: Text('Later',
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.7))),
+                    ),
+                    const SizedBox(height: 8),
+                    // Go Premium link
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _showRewardedPrompt = false);
+                        context.push('/premium');
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                    ],
-                  ),
-                ]),
+                      child: Text(
+                        'Go Premium — No Ads Ever',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                    // Dismiss
+                    TextButton(
+                      onPressed: () =>
+                          setState(() => _showRewardedPrompt = false),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Not now',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
             // ── Input bar ──
